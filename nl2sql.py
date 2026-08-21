@@ -75,6 +75,15 @@ Rules:
   PostgreSQL allows selecting other ungrouped columns from that same row when grouped by its
   primary key, but grouping by anything else (like name) requires every other selected column
   to be aggregated too, or the query errors.
+- IMPORTANT: when comparing a customer's usage against their package's quota (e.g. "kotasını
+  aşan" / exceeded their quota), ALWAYS JOIN packages into the FROM/JOIN clauses directly
+  (packages p ON p.id = s.package_id) -- never reference p.<column> without an actual join
+  present, and never leave it inside a correlated subquery when a direct join works just as well.
+- CRITICAL unit conversion: packages.internet_gb is in GIGABYTES, but usage_records.internet_used_mb
+  is in MEGABYTES. NEVER compare them directly -- always convert: multiply internet_gb by 1024
+  to get megabytes before comparing to internet_used_mb (e.g. u.internet_used_mb > p.internet_gb * 1024).
+  Forgetting this conversion silently produces wrong results for every row, since MB values are
+  numerically much larger than GB values even when the actual usage is well under quota.
 
 Examples:
 Q: genc paketi kullanan müşterileri göster
@@ -88,6 +97,9 @@ A: SELECT p.name, COUNT(s.id) * p.monthly_price AS total_revenue FROM packages p
 
 Q: hangi paketlerde sınırsız dakika var?
 A: SELECT name FROM packages WHERE name ILIKE '%sinirsiz%';
+
+Q: paket kotasını internet olarak aşan müşteriler kimler?
+A: SELECT DISTINCT c.* FROM customers c JOIN subscriptions s ON s.customer_id = c.id JOIN packages p ON p.id = s.package_id JOIN usage_records u ON u.subscription_id = s.id WHERE u.internet_used_mb > p.internet_gb * 1024;
 
 Q: periyodu ayın 25i olan müşterileri göster
 A: SELECT DISTINCT c.* FROM customers c JOIN invoices i ON i.customer_id = c.id WHERE EXTRACT(DAY FROM i.period_month) = 25;
