@@ -557,9 +557,12 @@ function el(tag, cls, text) {
   return e;
 }
 
+const userFirstName = {{ first_name | tojson }};
+const userInitial = userFirstName ? userFirstName.charAt(0).toUpperCase() : '?';
+
 function avatarEl(role) {
   const a = el('div', 'avatar ' + role);
-  a.textContent = role === 'user' ? 'S' : 'T';
+  a.textContent = role === 'user' ? userInitial : 'T';
   return a;
 }
 
