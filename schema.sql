@@ -8,19 +8,20 @@ CREATE TABLE customers (
     national_id   TEXT NOT NULL UNIQUE,
     city          TEXT NOT NULL,
     signup_date   DATE NOT NULL DEFAULT CURRENT_DATE,
-    line_type     TEXT NOT NULL CHECK (line_type IN ('prepaid', 'postpaid')),
     status        TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'cancelled'))
 );
 
 CREATE TABLE packages (
     id             SERIAL PRIMARY KEY,
     name           TEXT NOT NULL,
-    category       TEXT NOT NULL CHECK (category IN ('mobile', 'combo')),
+    category       TEXT NOT NULL CHECK (category IN ('mobile', 'combo', 'addon')),
+    line_type      TEXT NOT NULL DEFAULT 'both' CHECK (line_type IN ('prepaid', 'postpaid', 'both')),
     internet_gb    INTEGER NOT NULL DEFAULT 0,
     sms_count      INTEGER NOT NULL DEFAULT 0,
     voice_minutes  INTEGER NOT NULL DEFAULT 0,
-    monthly_price  NUMERIC(10, 2) NOT NULL,
-    is_active      BOOLEAN NOT NULL DEFAULT TRUE
+    monthly_price  NUMERIC(10, 2) NOT NULL, -- for is_recurring = FALSE rows, this is a one-time price, not monthly
+    is_active      BOOLEAN NOT NULL DEFAULT TRUE,
+    is_recurring   BOOLEAN NOT NULL DEFAULT TRUE -- FALSE = one-time add-on (e.g. "Ekstra 1 GB"), not a recurring plan
 );
 
 CREATE TABLE subscriptions (
@@ -56,6 +57,9 @@ CREATE TABLE users (
     id            SERIAL PRIMARY KEY,
     email         TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    first_name    TEXT NOT NULL DEFAULT '',
+    last_name     TEXT NOT NULL DEFAULT '',
+    is_admin      BOOLEAN NOT NULL DEFAULT FALSE,
     created_at    TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -74,4 +78,15 @@ CREATE TABLE chat_messages (
     sql_query        TEXT,
     result_rows      JSONB,
     created_at       TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- User-submitted reports flagging a bad answer. Stores a snapshot of the question/SQL/rows so
+-- the report survives even if the underlying conversation is later deleted.
+CREATE TABLE reports (
+    id            SERIAL PRIMARY KEY,
+    user_id       INTEGER NOT NULL REFERENCES users(id),
+    question      TEXT NOT NULL,
+    sql_query     TEXT,
+    result_rows   JSONB,
+    created_at    TIMESTAMP NOT NULL DEFAULT NOW()
 );
