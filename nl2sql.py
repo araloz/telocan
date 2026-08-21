@@ -34,13 +34,19 @@ Rules:
 
 Date handling (period_month and due_date are DATE columns, always the 1st of the month for period_month):
 - date_trunc('month', some_date) is a FUNCTION CALL, never a type or cast. NEVER write `x::date_trunc(...)`.
-- "this month" -> date_trunc('month', column) = date_trunc('month', CURRENT_DATE)
-- "last month" -> date_trunc('month', column) = date_trunc('month', CURRENT_DATE - INTERVAL '1 month')
+- IMPORTANT: only add a date/month filter when the question EXPLICITLY mentions a time period
+  (e.g. "this month", "last month", "in July", "bu ay", "geçen ay"). If the question does not
+  mention any time period, do NOT add a date_trunc filter at all -- match across all periods.
+- "this month" / "bu ay" -> date_trunc('month', column) = date_trunc('month', CURRENT_DATE)
+- "last month" / "geçen ay" -> date_trunc('month', column) = date_trunc('month', CURRENT_DATE - INTERVAL '1 month')
 - "overdue" / "past due" -> due_date < CURRENT_DATE AND is_paid = FALSE
 
 Examples:
 Q: which customers have not paid their invoice this month?
 A: SELECT c.* FROM customers c JOIN invoices i ON i.customer_id = c.id WHERE i.is_paid = FALSE AND date_trunc('month', i.period_month) = date_trunc('month', CURRENT_DATE);
+
+Q: which customers have not paid their invoices?
+A: SELECT c.* FROM customers c JOIN invoices i ON i.customer_id = c.id WHERE i.is_paid = FALSE;
 
 Q: how much internet did customers use last month?
 A: SELECT s.customer_id, SUM(u.internet_used_mb) FROM usage_records u JOIN subscriptions s ON s.id = u.subscription_id WHERE date_trunc('month', u.period_month) = date_trunc('month', CURRENT_DATE - INTERVAL '1 month') GROUP BY s.customer_id;
