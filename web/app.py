@@ -298,5 +298,45 @@ def mark_report_fixed(report_id):
     return jsonify({"ok":True})
 
 
+@app.route("/admin/users")
+@admin_required
+def admin_search_users():
+    query = request.args.get("q", "").strip()
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, email, first_name, last_name, is_admin FROM users WHERE email ILIKE %s ORDER BY email",
+                (f"%{query}%",),
+            )
+            rows = cur.fetchall()
+
+    finally:
+        conn.close()
+
+    users = [
+         {"id": r[0], "email": r[1], "first_name": r[2], "last_name": r[3], "is_admin": r[4]}
+        for r in rows
+    ]
+    return jsonify(users)
+
+
+@app.route("/admin/users/<int:user_id>/make-admin", methods=["POST"])
+@admin_required
+def make_admin(user_id):
+    conn =get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET is_admin = TRUE WHERE id = %s", (user_id,))
+            updated = cur.rowcount
+            conn.commit()
+    finally:
+        conn.close()
+
+    if updated == 0:
+        return jsonify({"error":"Kullanıcı bulunamadı."}),404
+    return jsonify({"ok":True})
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
