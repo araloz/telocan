@@ -233,6 +233,59 @@
     border: 1px solid var(--error);
     color: var(--error);
   }
+  .sql-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .sql-row details.sql-block {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+  }
+  .report-btn {
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+  .report-btn:hover:not(:disabled) {
+    color: var(--accent);
+    background: rgba(79, 140, 255, 0.1);
+  }
+  .report-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
   details.sql-block {
     margin-top: 10px;
     font-size: 12px;
@@ -406,6 +459,7 @@
     <h1>Telocan</h1>
     <p>Müşteriler, paketler, abonelikler, kullanım ve faturalar hakkında doğal dilde sorular sorun.</p>
   </div>
+  {% if is_admin %}<a class="logout-link" href="/admin">Admin Paneli</a>{% endif %}
   <a class="logout-link" href="/logout">Çıkış Yap</a>
 </header>
 
@@ -521,7 +575,7 @@ async function loadConversation(id) {
     messagesEl.innerHTML = '';
     msgs.forEach(m => {
       addMessage('user', m.question);
-      addAssistantResult({ sql: m.sql, rows: m.rows });
+      addAssistantResult({ question: m.question, sql: m.sql, rows: m.rows });
     });
 
     currentConversationId = id;
@@ -620,6 +674,33 @@ function buildResultTable(rows) {
   return container;
 }
 
+function showToast(message) {
+  const toast = el('div', 'toast', message);
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+async function sendReport(result, btn) {
+  btn.disabled = true;
+  try {
+    const resp = await fetch('/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: result.question, sql: result.sql, rows: result.rows })
+    });
+    if (!resp.ok) throw new Error('failed');
+    showToast('Rapor yollandı.');
+  } catch (err) {
+    showToast('Rapor gönderilemedi.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function addAssistantResult(result) {
   const { bubble } = addMessage('assistant', '');
   bubble.appendChild(buildResultTable(result.rows));
@@ -629,7 +710,17 @@ function addAssistantResult(result) {
   const pre = el('pre', null, result.sql);
   details.appendChild(summary);
   details.appendChild(pre);
-  bubble.appendChild(details);
+
+  const reportBtn = el('button', 'report-btn', '🚩');
+  reportBtn.type = 'button';
+  reportBtn.title = 'Bu yanıtı raporla';
+  reportBtn.setAttribute('aria-label', 'Raporla');
+  reportBtn.addEventListener('click', () => sendReport(result, reportBtn));
+
+  const sqlRow = el('div', 'sql-row');
+  sqlRow.appendChild(details);
+  sqlRow.appendChild(reportBtn);
+  bubble.appendChild(sqlRow);
 }
 
 async function sendQuestion() {

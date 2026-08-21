@@ -178,7 +178,7 @@ def login():
 @app.route("/")
 @login_required
 def index():
-    return render_template("index.html", first_name=session.get("first_name", ""))
+    return render_template("index.html", first_name=session.get("first_name", ""), is_admin=session.get("is_admin", False))
 
 
 

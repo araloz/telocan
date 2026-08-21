@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Telocan — Raporlar</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2e38;
+    --text: #e6e8ee;
+    --muted: #9aa1ac;
+    --accent: #4f8cff;
+    --user-bubble: #24304a;
+    --error: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  nav a {
+    display: inline-block;
+    padding: 16px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+  }
+  nav a:hover {
+    color: var(--text);
+  }
+  nav a.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+  nav .spacer {
+    flex: 1;
+  }
+  nav .logout-link {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 12px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  nav .logout-link:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+  main h1 {
+    margin: 0 0 20px;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .empty-state {
+    color: var(--muted);
+    font-size: 14px;
+    padding: 40px 0;
+    text-align: center;
+  }
+  .report-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .report-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .report-author {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .report-date {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .report-question {
+    font-size: 15px;
+    line-height: 1.45;
+    margin-bottom: 12px;
+  }
+  details.sql-block {
+    margin-top: 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+  details.sql-block summary {
+    cursor: pointer;
+    color: var(--muted);
+    user-select: none;
+  }
+  details.sql-block summary:hover {
+    color: var(--text);
+  }
+  details.sql-block pre {
+    margin: 8px 0 0;
+    padding: 10px 12px;
+    background: #0b0d12;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: "SF Mono", Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    color: #c9d1e0;
+  }
+  .result-table-wrap {
+    margin-top: 4px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  table.result-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+  }
+  table.result-table th, table.result-table td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.result-table th {
+    background: #1d222c;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  table.result-table tr:last-child td {
+    border-bottom: none;
+  }
+  .row-count {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/">Telocan</a>
+  <a href="/admin" class="active">Raporlar</a>
+  <div class="spacer"></div>
+  <a class="logout-link" href="/logout">Çıkış Yap</a>
+</nav>
+
+<main>
+  <h1>Raporlar</h1>
+
+  {% if not reports %}
+    <div class="empty-state">Henüz rapor yok.</div>
+  {% else %}
+    {% for report in reports %}
+      {% set full_name = ((report.first_name or '') ~ ' ' ~ (report.last_name or '')).strip() %}
+      <div class="report-card">
+        <div class="report-meta">
+          <span class="report-author">{{ full_name if full_name else report.email }}</span>
+          <span class="report-date">{{ report.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+        </div>
+        <div class="report-question">{{ report.question }}</div>
+
+        <details class="sql-block">
+          <summary>Oluşturulan SQL'i göster</summary>
+          <pre>{{ report.sql }}</pre>
+        </details>
+
+        {% if report.rows %}
+          <div class="result-table-wrap">
+            <table class="result-table">
+              <thead>
+                <tr>
+                  {% for col in report.rows[0].keys() %}
+                    <th>{{ col }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in report.rows %}
+                  <tr>
+                    {% for col in report.rows[0].keys() %}
+                      <td>{{ row[col] if row[col] is not none else '' }}</td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="row-count">{{ report.rows|length }} satır</div>
+        {% else %}
+          <div class="row-count">Sonuç bulunamadı.</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+</main>
+</body>
+</html>
