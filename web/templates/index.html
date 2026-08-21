@@ -23,6 +23,107 @@
     color: var(--text);
     height: 100vh;
     display: flex;
+    flex-direction: row;
+  }
+  #sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    height: 100vh;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .new-chat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .new-chat-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .conv-list-label {
+    margin: 4px 2px 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  #convList {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+  }
+  .conv-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .conv-item:hover {
+    background: #1d222c;
+    color: var(--text);
+  }
+  .conv-item.active {
+    background: var(--user-bubble);
+    color: var(--text);
+  }
+  .conv-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .conv-delete {
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    padding: 4px 6px;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .conv-item:hover .conv-delete {
+    opacity: 1;
+  }
+  .conv-delete:hover {
+    color: var(--error);
+    background: rgba(255, 107, 107, 0.1);
+  }
+  .conv-list-empty {
+    color: var(--muted);
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+  #main {
+    flex: 1;
+    min-width: 0;
+    height: 100vh;
+    display: flex;
     flex-direction: column;
   }
   header {
@@ -294,6 +395,13 @@
 </style>
 </head>
 <body class="state-empty">
+<div id="sidebar">
+  <button class="new-chat-btn" id="newChatBtn">+ Yeni Sohbet</button>
+  <div class="conv-list-label">Sohbetler</div>
+  <div id="convList"></div>
+</div>
+
+<div id="main">
 <header>
   <div>
     <h1>Telocan</h1>
@@ -313,6 +421,7 @@
 <div id="messages"></div>
 
 <div id="bottomBar"></div>
+</div>
 
 <script>
 const messagesEl = document.getElementById('messages');
@@ -320,8 +429,19 @@ const inputEl = document.getElementById('questionInput');
 const sendBtn = document.getElementById('sendBtn');
 const pillEl = document.getElementById('pill');
 const bottomBarEl = document.getElementById('bottomBar');
+const emptyStateEl = document.getElementById('emptyState');
+const convListEl = document.getElementById('convList');
+const newChatBtn = document.getElementById('newChatBtn');
 
 let chatStarted = false;
+let currentConversationId = null;
+
+const TR_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+function formatConversationLabel(conv) {
+  const d = new Date(conv.created_at);
+  return `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${d.getFullYear()} · #${conv.id}`;
+}
 
 function enterChatState() {
   if (chatStarted) return;
@@ -330,6 +450,106 @@ function enterChatState() {
   document.body.classList.remove('state-empty');
   document.body.classList.add('state-chat');
 }
+
+function resetToEmptyState() {
+  chatStarted = false;
+  currentConversationId = null;
+  messagesEl.innerHTML = '';
+  emptyStateEl.appendChild(pillEl);
+  document.body.classList.remove('state-chat');
+  document.body.classList.add('state-empty');
+  inputEl.value = '';
+  setActiveConversation(null);
+  inputEl.focus();
+}
+
+function setActiveConversation(id) {
+  Array.from(convListEl.children).forEach(child => {
+    child.classList.toggle('active', child.dataset.id === String(id));
+  });
+}
+
+function buildConversationItem(conv) {
+  const item = el('div', 'conv-item');
+  item.dataset.id = String(conv.id);
+  if (conv.id === currentConversationId) item.classList.add('active');
+
+  const label = el('span', 'conv-label', formatConversationLabel(conv));
+  const delBtn = el('button', 'conv-delete', '🗑');
+  delBtn.type = 'button';
+  delBtn.setAttribute('aria-label', 'Sohbeti sil');
+
+  item.appendChild(label);
+  item.appendChild(delBtn);
+
+  item.addEventListener('click', () => loadConversation(conv.id));
+  delBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    deleteConversation(conv.id, item);
+  });
+
+  return item;
+}
+
+function renderConversationList(convs) {
+  convListEl.innerHTML = '';
+  if (!convs.length) {
+    convListEl.appendChild(el('div', 'conv-list-empty', 'Henüz sohbet yok'));
+    return;
+  }
+  convs.forEach(conv => convListEl.appendChild(buildConversationItem(conv)));
+}
+
+async function loadConversationList() {
+  try {
+    const resp = await fetch('/conversations');
+    if (!resp.ok) throw new Error('failed');
+    const convs = await resp.json();
+    renderConversationList(convs);
+  } catch (err) {
+    convListEl.innerHTML = '';
+    convListEl.appendChild(el('div', 'conv-list-empty', 'Sohbetler yüklenemedi'));
+  }
+}
+
+async function loadConversation(id) {
+  try {
+    const resp = await fetch(`/conversations/${id}/messages`);
+    if (!resp.ok) throw new Error('failed');
+    const msgs = await resp.json();
+
+    enterChatState();
+    messagesEl.innerHTML = '';
+    msgs.forEach(m => {
+      addMessage('user', m.question);
+      addAssistantResult({ sql: m.sql, rows: m.rows });
+    });
+
+    currentConversationId = id;
+    setActiveConversation(id);
+  } catch (err) {
+    addMessage('error', 'Sohbet yüklenemedi: ' + err.message);
+  }
+}
+
+async function deleteConversation(id, itemEl) {
+  if (!confirm('Bu sohbeti silmek istediğinizden emin misiniz?')) return;
+  try {
+    const resp = await fetch(`/conversations/${id}`, { method: 'DELETE' });
+    if (!resp.ok) throw new Error('failed');
+    itemEl.remove();
+    if (!convListEl.children.length) {
+      convListEl.appendChild(el('div', 'conv-list-empty', 'Henüz sohbet yok'));
+    }
+    if (currentConversationId === id) {
+      resetToEmptyState();
+    }
+  } catch (err) {
+    alert('Sohbet silinemedi.');
+  }
+}
+
+newChatBtn.addEventListener('click', resetToEmptyState);
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -426,7 +646,7 @@ async function sendQuestion() {
     const resp = await fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question })
+      body: JSON.stringify({ question, conversation_id: currentConversationId })
     });
     const data = await resp.json();
     thinkingWrap.remove();
@@ -435,6 +655,12 @@ async function sendQuestion() {
       addMessage('error', data.error || 'Bir şeyler ters gitti.');
     } else {
       addAssistantResult(data);
+      const isNewConversation = currentConversationId === null;
+      currentConversationId = data.conversation_id;
+      if (isNewConversation) {
+        await loadConversationList();
+      }
+      setActiveConversation(currentConversationId);
     }
   } catch (err) {
     thinkingWrap.remove();
@@ -449,6 +675,8 @@ sendBtn.addEventListener('click', sendQuestion);
 inputEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') sendQuestion();
 });
+
+loadConversationList();
 </script>
 </body>
 </html>
