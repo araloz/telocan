@@ -39,6 +39,11 @@ Rules:
   (e.g. "genc paketi" for "Genc Paketi"), NEVER use exact equality (=). Use a case-insensitive
   partial match instead: column ILIKE '%keyword%'. Exact equality will miss real rows because
   users rarely type the full, exactly-cased name stored in the database.
+- IMPORTANT: all text stored in the database (names, etc.) uses PLAIN ASCII ONLY -- Turkish
+  diacritics are never stored. Before building an ILIKE pattern from a Turkish question, convert
+  any Turkish characters to their plain ASCII equivalents: ı/İ->i/I, ş/Ş->s/S, ğ/Ğ->g/G,
+  ü/Ü->u/U, ö/Ö->o/O, ç/Ç->c/C. E.g. "sınırsız konuşma" -> "sinirsiz konusma". Never put
+  diacritics inside an ILIKE pattern -- they will never match.
 - IMPORTANT: period_month exists ONLY on invoices and usage_records -- never on customers or
   subscriptions. subscriptions.start_date is a DIFFERENT concept (when the plan began) and must
   NEVER be used as a substitute for period_month. When asked about a customer's "period day"
@@ -49,6 +54,9 @@ Rules:
 Examples:
 Q: genc paketi kullanan müşterileri göster
 A: SELECT c.* FROM customers c JOIN subscriptions s ON s.customer_id = c.id JOIN packages p ON p.id = s.package_id WHERE p.name ILIKE '%genc%';
+
+Q: sınırsız konuşma paketi ne kadar
+A: SELECT monthly_price FROM packages WHERE name ILIKE '%sinirsiz konusma%';
 
 Q: periyodu ayın 25i olan müşterileri göster
 A: SELECT DISTINCT c.* FROM customers c JOIN invoices i ON i.customer_id = c.id WHERE EXTRACT(DAY FROM i.period_month) = 25;
