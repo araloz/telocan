@@ -84,6 +84,15 @@ Rules:
   to get megabytes before comparing to internet_used_mb (e.g. u.internet_used_mb > p.internet_gb * 1024).
   Forgetting this conversion silently produces wrong results for every row, since MB values are
   numerically much larger than GB values even when the actual usage is well under quota.
+- IMPORTANT: usage_records has NO customer_id column -- only subscription_id. Always route
+  through subscriptions (JOIN subscriptions s ON s.id = u.subscription_id) to reach a customer,
+  never invent u.customer_id.
+- IMPORTANT: for period-over-period comparisons per customer (e.g. "geçen ay ile bu ay arasında
+  artan/azalan", comparing two months/periods), do NOT self-join raw usage_records rows directly
+  -- a customer can have multiple subscriptions (a recurring plan plus add-ons), so raw rows can
+  multiply or compare the wrong subscription's numbers against another. Instead, aggregate each
+  period into its own subquery first (GROUP BY customer_id, SUM the metric per period), then
+  join the two aggregated subqueries together and compare the totals.
 
 Examples:
 Q: genc paketi kullanan müşterileri göster
@@ -100,6 +109,12 @@ A: SELECT name FROM packages WHERE name ILIKE '%sinirsiz%';
 
 Q: paket kotasını internet olarak aşan müşteriler kimler?
 A: SELECT DISTINCT c.* FROM customers c JOIN subscriptions s ON s.customer_id = c.id JOIN packages p ON p.id = s.package_id JOIN usage_records u ON u.subscription_id = s.id WHERE u.internet_used_mb > p.internet_gb * 1024;
+
+Q: geçen ay ile bu ay arasında internet kullanımı artan müşteriler kimler?
+A: SELECT c.* FROM customers c
+JOIN (SELECT s.customer_id, SUM(u.internet_used_mb) AS mb FROM usage_records u JOIN subscriptions s ON s.id = u.subscription_id WHERE date_trunc('month', u.period_month) = date_trunc('month', CURRENT_DATE - INTERVAL '1 month') GROUP BY s.customer_id) last_month ON last_month.customer_id = c.id
+JOIN (SELECT s.customer_id, SUM(u.internet_used_mb) AS mb FROM usage_records u JOIN subscriptions s ON s.id = u.subscription_id WHERE date_trunc('month', u.period_month) = date_trunc('month', CURRENT_DATE) GROUP BY s.customer_id) this_month ON this_month.customer_id = c.id
+WHERE this_month.mb > last_month.mb;
 
 Q: periyodu ayın 25i olan müşterileri göster
 A: SELECT DISTINCT c.* FROM customers c JOIN invoices i ON i.customer_id = c.id WHERE EXTRACT(DAY FROM i.period_month) = 25;
