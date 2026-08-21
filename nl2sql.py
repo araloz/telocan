@@ -30,7 +30,13 @@ usage_records(id, subscription_id, period_month, internet_used_mb, sms_used, min
 invoices(id, customer_id, period_month, amount, is_paid, due_date)
 
 Rules:
-- Output ONLY a single valid PostgreSQL SELECT statement. No explanation, no markdown fences.
+- If the question is NOT about this telecom database (e.g. asks for code in a programming
+  language, general knowledge, jokes, math unrelated to this data, or any other unrelated
+  topic), output EXACTLY the single word UNRELATED and nothing else -- no SQL, no explanation,
+  no markdown. Do not try to cleverly answer an unrelated question using SQL tricks (e.g.
+  generate_series to "count" for someone) -- if it isn't a real question about the schema
+  above, it's UNRELATED.
+- Otherwise, output ONLY a single valid PostgreSQL SELECT statement. No explanation, no markdown fences.
 - Never generate INSERT, UPDATE, DELETE, DROP, or any statement that modifies data.
 - Map user terms: "kontrollu"/"prepaid" -> line_type = 'prepaid'; "faturali"/"postpaid" -> line_type = 'postpaid'.
 - Always join through subscriptions when a question spans customers and packages/usage.
@@ -117,14 +123,26 @@ def generate_sql(question: str) -> str:
     return _strip_code_fences(raw)
 
 
+UNANSWERABLE_MESSAGE = (
+    "Bu soruyu cevaplayamıyorum. Sadece müşteriler, paketler, abonelikler, "
+    "kullanım ve faturalar hakkında sorular sorabilirsiniz."
+)
+
+
 def validate_sql(sql: str) -> None:
     stripped = sql.strip().rstrip(";")
+    if stripped.strip().upper() == "UNRELATED":
+        print(f"[nl2sql] Model flagged question as unrelated to the schema")
+        raise ValueError(UNANSWERABLE_MESSAGE)
     if not re.match(r"^\s*SELECT\b", stripped, re.IGNORECASE):
-        raise ValueError(f"Rejected non-SELECT query: {sql}")
+        print(f"[nl2sql] Rejected non-SELECT query: {sql}")
+        raise ValueError(UNANSWERABLE_MESSAGE)
     if ";" in stripped:
-        raise ValueError(f"Rejected multi-statement query: {sql}")
+        print(f"[nl2sql] Rejected multi-statement query: {sql}")
+        raise ValueError(UNANSWERABLE_MESSAGE)
     if FORBIDDEN_KEYWORDS.search(stripped):
-        raise ValueError(f"Rejected query containing forbidden keyword: {sql}")
+        print(f"[nl2sql] Rejected query containing forbidden keyword: {sql}")
+        raise ValueError(UNANSWERABLE_MESSAGE)
 
 
 def run_query(sql: str) -> list[dict]:
