@@ -29,6 +29,9 @@
     padding: 14px 20px;
     border-bottom: 1px solid var(--border);
     background: var(--panel);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
   header h1 {
     margin: 0;
@@ -39,6 +42,20 @@
     margin: 2px 0 0;
     font-size: 12px;
     color: var(--muted);
+  }
+  .logout-link {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 12px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .logout-link:hover {
+    color: var(--text);
+    border-color: var(--accent);
   }
   #messages {
     flex: 1;
@@ -278,8 +295,11 @@
 </head>
 <body class="state-empty">
 <header>
-  <h1>Telocan</h1>
-  <p>Müşteriler, paketler, abonelikler, kullanım ve faturalar hakkında doğal dilde sorular sorun.</p>
+  <div>
+    <h1>Telocan</h1>
+    <p>Müşteriler, paketler, abonelikler, kullanım ve faturalar hakkında doğal dilde sorular sorun.</p>
+  </div>
+  <a class="logout-link" href="/logout">Çıkış Yap</a>
 </header>
 
 <div id="emptyState">
