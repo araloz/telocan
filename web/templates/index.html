@@ -446,7 +446,7 @@
   body.state-chat #bottomBar { display: flex; }
 </style>
 </head>
-<body class="state-empty">
+<body class="state-empty" data-first-name="{{ first_name | e }}">
 <div id="sidebar">
   <button class="new-chat-btn" id="newChatBtn">+ Yeni Sohbet</button>
   <div class="conv-list-label">Sohbetler</div>
@@ -611,7 +611,7 @@ function el(tag, cls, text) {
   return e;
 }
 
-const userFirstName = {{ first_name | tojson }};
+const userFirstName = document.body.dataset.firstName;
 const userInitial = userFirstName ? userFirstName.charAt(0).toUpperCase() : '?';
 
 function avatarEl(role) {
