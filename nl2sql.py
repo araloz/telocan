@@ -19,7 +19,8 @@ customers(id, first_name, last_name, phone_number, national_id, city, signup_dat
   - line_type: 'prepaid' (Turkish: kontrollu) or 'postpaid' (Turkish: faturali)
   - status: 'active', 'suspended', 'cancelled'
 packages(id, name, category, internet_gb, sms_count, voice_minutes, monthly_price, is_active, is_recurring)
-  - category: 'mobile', 'combo', 'addon'  (phone packages only, no home internet)
+  - category: 'mobile' (voice/SMS only, internet_gb is always 0), 'combo' (bundled voice+SMS+internet),
+    'addon' (one-time top-up, see is_recurring below). Phone packages only, no home internet.
   - is_recurring: TRUE = a normal recurring monthly plan; FALSE = a one-time add-on/top-up
     (e.g. "Ekstra 1 GB"), not billed monthly. Turkish: "tekrarlanan" = recurring, "tek seferlik"
     / "tekrarlanmayan" = non-recurring/one-time. monthly_price holds the one-time price for
@@ -64,6 +65,16 @@ Rules:
   (e.g. "periyodu ayın 25i olan müşteriler" = customers whose period day is the 25th), filter
   EXTRACT(DAY FROM period_month) = <day> on invoices (join customer_id directly) or
   usage_records (join through subscriptions to reach customer_id).
+- IMPORTANT: invoices has ONLY customer_id as a foreign key -- there is NO invoices.subscription_id
+  column and invoices are never joined directly to packages or subscriptions. If a question needs
+  both invoice data and package/subscription data for the same customer, join invoices and
+  subscriptions separately, both through customer_id -- do not invent a subscription_id column
+  on invoices.
+- IMPORTANT: when using GROUP BY together with an aggregate function (COUNT, SUM, AVG, etc.),
+  GROUP BY the table's primary key column (e.g. p.id), never a non-unique column like name.
+  PostgreSQL allows selecting other ungrouped columns from that same row when grouped by its
+  primary key, but grouping by anything else (like name) requires every other selected column
+  to be aggregated too, or the query errors.
 
 Examples:
 Q: genc paketi kullanan müşterileri göster
@@ -71,6 +82,9 @@ A: SELECT c.* FROM customers c JOIN subscriptions s ON s.customer_id = c.id JOIN
 
 Q: sınırsız konuşma paketi ne kadar
 A: SELECT monthly_price FROM packages WHERE name ILIKE '%sinirsiz konusma%';
+
+Q: en çok geliri olan paket hangisi (toplam abone sayısı x fiyat)?
+A: SELECT p.name, COUNT(s.id) * p.monthly_price AS total_revenue FROM packages p JOIN subscriptions s ON s.package_id = p.id GROUP BY p.id ORDER BY total_revenue DESC LIMIT 1;
 
 Q: hangi paketlerde sınırsız dakika var?
 A: SELECT name FROM packages WHERE name ILIKE '%sinirsiz%';
