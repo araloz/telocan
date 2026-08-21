@@ -138,6 +138,12 @@ AND EXISTS (SELECT 1 FROM invoices i WHERE i.customer_id = c.id AND i.is_paid = 
 -- month, last month, ...) -- NOT to some arbitrary earlier month -- since the current month's
 -- data already exists in this dataset even though the month isn't over.
 
+Q: faturalı hatlı ama abonelik durumu iptal olan müşteriler kimler?
+A: SELECT c.* FROM customers c JOIN subscriptions s ON s.customer_id = c.id WHERE c.line_type = 'postpaid' AND s.status = 'cancelled';
+-- Note: a question phrased as a contradiction/exception ("X ama Y" / "X but Y") is still just a
+-- normal multi-condition filter across two tables -- it is NOT unrelated or unanswerable just
+-- because the combination sounds unusual. line_type is on customers, status is on subscriptions.
+
 Q: periyodu ayın 25i olan müşterileri göster
 A: SELECT DISTINCT c.* FROM customers c JOIN invoices i ON i.customer_id = c.id WHERE EXTRACT(DAY FROM i.period_month) = 25;
 
