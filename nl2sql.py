@@ -40,6 +40,11 @@ Date handling (period_month and due_date are DATE columns, always the 1st of the
 - "this month" / "bu ay" -> date_trunc('month', column) = date_trunc('month', CURRENT_DATE)
 - "last month" / "geçen ay" -> date_trunc('month', column) = date_trunc('month', CURRENT_DATE - INTERVAL '1 month')
 - "overdue" / "past due" -> due_date < CURRENT_DATE AND is_paid = FALSE
+- For a NAMED month with no year given (e.g. "in July", "temmuz ayında"), NEVER compare
+  date_trunc(...) to a string literal date -- this causes a "date_trunc(unknown, unknown) is
+  not unique" error because untyped string literals are ambiguous. Instead use
+  EXTRACT(MONTH FROM column) = <month_number>. Only filter by year too (EXTRACT(YEAR FROM
+  column) = <year>) if a year is explicitly stated in the question.
 
 Examples:
 Q: which customers have not paid their invoice this month?
@@ -50,6 +55,9 @@ A: SELECT c.* FROM customers c JOIN invoices i ON i.customer_id = c.id WHERE i.i
 
 Q: how much internet did customers use last month?
 A: SELECT s.customer_id, SUM(u.internet_used_mb) FROM usage_records u JOIN subscriptions s ON s.id = u.subscription_id WHERE date_trunc('month', u.period_month) = date_trunc('month', CURRENT_DATE - INTERVAL '1 month') GROUP BY s.customer_id;
+
+Q: which customers used 120 SMS in July?
+A: SELECT c.* FROM customers c JOIN subscriptions s ON s.customer_id = c.id JOIN usage_records u ON u.subscription_id = s.id WHERE u.sms_used = 120 AND EXTRACT(MONTH FROM u.period_month) = 7;
 
 User question: {question}
 """
