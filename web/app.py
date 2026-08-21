@@ -4,6 +4,8 @@ import sys
 from flask import Flask, jsonify, render_template, request, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+import json
+import psycopg2.extras
 import psycopg2
 
 
@@ -28,6 +30,72 @@ def login_required(view):
         return view(*args, **kwargs)
 
     return wrapped
+
+
+@app.route("/conversations", methods=["GET", "POST"])
+@login_required
+def conversations():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            if request.method == "POST":
+                cur.execute(
+                    "INSERT INTO conversations (user_id) VALUES (%s) RETURNING id, created_at",
+                    (session["user_id"],),
+                )
+                conv_id, created_at = cur.fetchone()
+                conn.commit()
+                return jsonify({"id": conv_id, "created_at": created_at.isoformat()})
+
+            cur.execute(
+            "SELECT id, created_at FROM conversations WHERE user_id = %s ORDER BY created_at DESC",
+            (session["user_id"],),
+        )
+            rows = cur.fetchall()
+            return jsonify([{"id":r[0], "created_at": r[1].isoformat()} for r in rows])
+    finally:
+        conn.close()
+
+
+@app.route("/conversations/<int:conv_id>/messages")
+@login_required
+def conversation_messages(conv_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT user_id FROM conversations WHERE id = %s", (conv_id,))
+            owner = cur.fetchone()
+            if not owner or owner[0] != session["user_id"]:
+                return jsonify({"error":"not found"}),404
+
+            cur.execute("SELECT question, sql_query, result_rows, created_at FROM chat_messages "
+                "WHERE conversation_id = %s ORDER BY created_at ASC", (conv_id,),
+            )
+            rows = cur.fetchall()
+            return jsonify([
+                {"question": r[0], "sql": r[1], "rows": r[2], "created_at": r[3].isoformat()} 
+                for r in rows
+            ])
+    finally:
+        conn.close()
+
+
+@app.route("/conversations/<int:conv_id>", methods=["DELETE"])
+@login_required
+def delete_conversation(conv_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute( "DELETE FROM conversations WHERE id = %s AND user_id = %s",
+                (conv_id, session["user_id"]),
+            )
+            deleted = cur.rowcount
+            conn.commit()
+        if deleted == 0:
+            return jsonify({"error":"not found"}),404
+        return jsonify({"ok": True})
+    finally:
+        conn.close()
 
 
 @app.route("/logout")
@@ -102,15 +170,37 @@ def index():
 def chat():
     data = request.get_json(silent=True) or {}
     question = (data.get("question") or "").strip()
+    conversation_id = data.get("conversation_id")
     if not question:
-        return jsonify({"error": "question is required"}), 400
+        return jsonify({"error": "Soru gerekli."}), 400
 
     try:
         result = ask_database(question)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            if not conversation_id:
+                cur.execute(
+                    "INSERT INTO conversations (user_id) VALUES (%s) RETURNING id",
+                    (session["user_id"],),
+                )
+                conversation_id = cur.fetchone()[0]
+
+            cur.execute(
+                "INSERT INTO chat_messages (conversation_id, question, sql_query, result_rows) "
+                "VALUES (%s, %s, %s, %s)",
+                (conversation_id, result["question"], result["sql"], psycopg2.extras.Json(result["rows"], dumps=lambda obj: json.dumps(obj, default=str))),
+            )
+            conn.commit()
+    finally:
+        conn.close()
+
+    result["conversation_id"] = conversation_id
     return jsonify(result)
+    
 
 
 if __name__ == "__main__":

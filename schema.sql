@@ -58,3 +58,20 @@ CREATE TABLE users (
     password_hash TEXT NOT NULL,
     created_at    TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- One row per chat session, owned by a user.
+CREATE TABLE conversations (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id),
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- One row per question/answer pair within a conversation.
+CREATE TABLE chat_messages (
+    id               SERIAL PRIMARY KEY,
+    conversation_id  INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    question         TEXT NOT NULL,
+    sql_query        TEXT,
+    result_rows      JSONB,
+    created_at       TIMESTAMP NOT NULL DEFAULT NOW()
+);
