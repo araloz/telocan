@@ -1,23 +1,23 @@
 -- Sample data for the telecom project
 
-INSERT INTO packages (name, category, internet_gb, sms_count, voice_minutes, monthly_price, is_active) VALUES
-('Genc Paketi',      'combo',    20, 1000, 1000, 149.90, TRUE),
-('Sinirsiz Konusma',  'mobile',   10, 500,  5000, 179.90, TRUE),
-('Baslangic Paketi',  'combo',    5,  250,  250,  89.90,  TRUE),
-('Premium Sinirsiz',  'combo',    100,2000, 10000,299.90, TRUE),
-('Eski Ekonomik',     'mobile',   2,  100,  100,  49.90,  FALSE);
+INSERT INTO packages (name, category, line_type, internet_gb, sms_count, voice_minutes, monthly_price, is_active) VALUES
+('Genc Paketi',      'combo',    'both',     20, 1000, 1000, 149.90, TRUE),
+('Sinirsiz Konusma',  'mobile',   'postpaid', 10, 500,  5000, 179.90, TRUE),
+('Baslangic Paketi',  'combo',    'prepaid',  5,  250,  250,  89.90,  TRUE),
+('Premium Sinirsiz',  'combo',    'postpaid', 100,2000, 10000,299.90, TRUE),
+('Eski Ekonomik',     'mobile',   'prepaid',  2,  100,  100,  49.90,  FALSE);
 
-INSERT INTO customers (first_name, last_name, phone_number, national_id, city, signup_date, line_type, status) VALUES
-('Ahmet',  'Yilmaz',  '5301112233', '10000000001', 'Istanbul', '2023-01-15', 'postpaid', 'active'),
-('Ayse',   'Kaya',    '5302223344', '10000000002', 'Ankara',   '2023-03-22', 'prepaid',  'active'),
-('Mehmet', 'Demir',   '5303334455', '10000000003', 'Izmir',    '2022-11-05', 'postpaid', 'active'),
-('Fatma',  'Sahin',   '5304445566', '10000000004', 'Bursa',    '2024-02-10', 'prepaid',  'suspended'),
-('Ali',    'Celik',   '5305556677', '10000000005', 'Istanbul', '2023-07-30', 'postpaid', 'active'),
-('Zeynep', 'Arslan',  '5306667788', '10000000006', 'Antalya',  '2024-05-18', 'prepaid',  'active'),
-('Mustafa','Aydin',   '5307778899', '10000000007', 'Ankara',   '2021-09-01', 'postpaid', 'cancelled'),
-('Elif',   'Ozturk',  '5308889900', '10000000008', 'Istanbul', '2023-12-12', 'prepaid',  'active'),
-('Emre',   'Kurt',    '5309990011', '10000000009', 'Izmir',    '2024-01-25', 'postpaid', 'active'),
-('Merve',  'Yildiz',  '5301000022', '10000000010', 'Bursa',    '2022-06-14', 'prepaid',  'active');
+INSERT INTO customers (first_name, last_name, phone_number, national_id, city, signup_date, status) VALUES
+('Ahmet',  'Yilmaz',  '5301112233', '10000000001', 'Istanbul', '2023-01-15', 'active'),
+('Ayse',   'Kaya',    '5302223344', '10000000002', 'Ankara',   '2023-03-22', 'active'),
+('Mehmet', 'Demir',   '5303334455', '10000000003', 'Izmir',    '2022-11-05', 'active'),
+('Fatma',  'Sahin',   '5304445566', '10000000004', 'Bursa',    '2024-02-10', 'suspended'),
+('Ali',    'Celik',   '5305556677', '10000000005', 'Istanbul', '2023-07-30', 'active'),
+('Zeynep', 'Arslan',  '5306667788', '10000000006', 'Antalya',  '2024-05-18', 'active'),
+('Mustafa','Aydin',   '5307778899', '10000000007', 'Ankara',   '2021-09-01', 'cancelled'),
+('Elif',   'Ozturk',  '5308889900', '10000000008', 'Istanbul', '2023-12-12', 'active'),
+('Emre',   'Kurt',    '5309990011', '10000000009', 'Izmir',    '2024-01-25', 'active'),
+('Merve',  'Yildiz',  '5301000022', '10000000010', 'Bursa',    '2022-06-14', 'active');
 
 INSERT INTO subscriptions (customer_id, package_id, start_date, end_date, status) VALUES
 (1, 4, '2023-01-15', NULL, 'active'),
