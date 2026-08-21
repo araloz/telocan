@@ -52,11 +52,19 @@ Rules:
   (e.g. "genc paketi" for "Genc Paketi"), NEVER use exact equality (=). Use a case-insensitive
   partial match instead: column ILIKE '%keyword%'. Exact equality will miss real rows because
   users rarely type the full, exactly-cased name stored in the database.
-- IMPORTANT: all text stored in the database (names, etc.) uses PLAIN ASCII ONLY -- Turkish
-  diacritics are never stored. Before building an ILIKE pattern from a Turkish question, convert
-  any Turkish characters to their plain ASCII equivalents: ı/İ->i/I, ş/Ş->s/S, ğ/Ğ->g/G,
-  ü/Ü->u/U, ö/Ö->o/O, ç/Ç->c/C. E.g. "sınırsız konuşma" -> "sinirsiz konusma". Never put
-  diacritics inside an ILIKE pattern -- they will never match.
+- IMPORTANT: ALL text stored in the database (package names, city names, everything) uses PLAIN
+  ASCII ONLY -- Turkish diacritics are never stored. This applies to city too, e.g. "İstanbul" is
+  stored as "Istanbul" (plain ASCII I). Before building any string comparison from a Turkish
+  question -- whether ILIKE or =  -- convert Turkish characters to plain ASCII equivalents:
+  ı/İ->i/I, ş/Ş->s/S, ğ/Ğ->g/G, ü/Ü->u/U, ö/Ö->o/O, ç/Ç->c/C. E.g. "sınırsız konuşma" ->
+  "sinirsiz konusma", "İstanbul" -> "Istanbul". Never put diacritics inside a comparison -- they
+  will never match. For city, use = with the converted ASCII value (city names are stored exactly,
+  no partial matching needed) -- ILIKE is only needed for package names where users type informally.
+- IMPORTANT: only JOIN a table if the question actually needs a column from it. Do not join
+  subscriptions unless you need package/subscription-specific data -- customers.line_type,
+  customers.status, customers.city are all on the customers table directly and never require
+  joining subscriptions. An unnecessary join is a common source of referencing a column on the
+  wrong table alias (e.g. writing s.line_type when it's actually c.line_type).
 - IMPORTANT: when building an ILIKE pattern for a package/name lookup, use ONLY the core
   distinctive keyword likely to actually appear in the stored name (e.g. "sinirsiz", "premium",
   "ekstra", "genc") -- NEVER glue on adjacent descriptive/feature words from the question (e.g.
