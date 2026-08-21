@@ -37,6 +37,12 @@ Rules:
   no markdown. Do not try to cleverly answer an unrelated question using SQL tricks (e.g.
   generate_series to "count" for someone) -- if it isn't a real question about the schema
   above, it's UNRELATED.
+- CRITICAL: UNRELATED is ONLY for questions that have nothing to do with customers, packages,
+  subscriptions, usage, or invoices. NEVER output UNRELATED just because a question is difficult,
+  requires multiple joins/subqueries, or takes real effort to translate -- a hard-but-in-domain
+  question (e.g. comparing data across multiple time periods, multi-step aggregations) must
+  always get a genuine SQL attempt. Giving up on a hard question is a worse failure than writing
+  an imperfect query.
 - Otherwise, output ONLY a single valid PostgreSQL SELECT statement. No explanation, no markdown fences.
 - Never generate INSERT, UPDATE, DELETE, DROP, or any statement that modifies data.
 - Map user terms: "kontrollu"/"prepaid" -> line_type = 'prepaid'; "faturali"/"postpaid" -> line_type = 'postpaid'.
@@ -115,6 +121,14 @@ A: SELECT c.* FROM customers c
 JOIN (SELECT s.customer_id, SUM(u.internet_used_mb) AS mb FROM usage_records u JOIN subscriptions s ON s.id = u.subscription_id WHERE date_trunc('month', u.period_month) = date_trunc('month', CURRENT_DATE - INTERVAL '1 month') GROUP BY s.customer_id) last_month ON last_month.customer_id = c.id
 JOIN (SELECT s.customer_id, SUM(u.internet_used_mb) AS mb FROM usage_records u JOIN subscriptions s ON s.id = u.subscription_id WHERE date_trunc('month', u.period_month) = date_trunc('month', CURRENT_DATE) GROUP BY s.customer_id) this_month ON this_month.customer_id = c.id
 WHERE this_month.mb > last_month.mb;
+
+Q: iki aydır üst üste ödeme yapmamış müşteriler var mı?
+A: SELECT c.* FROM customers c
+WHERE EXISTS (SELECT 1 FROM invoices i WHERE i.customer_id = c.id AND i.is_paid = FALSE AND date_trunc('month', i.period_month) = date_trunc('month', CURRENT_DATE))
+AND EXISTS (SELECT 1 FROM invoices i WHERE i.customer_id = c.id AND i.is_paid = FALSE AND date_trunc('month', i.period_month) = date_trunc('month', CURRENT_DATE - INTERVAL '1 month'));
+-- Note: anchor "N consecutive months" to CURRENT_DATE and count backwards from there (this
+-- month, last month, ...) -- NOT to some arbitrary earlier month -- since the current month's
+-- data already exists in this dataset even though the month isn't over.
 
 Q: periyodu ayın 25i olan müşterileri göster
 A: SELECT DISTINCT c.* FROM customers c JOIN invoices i ON i.customer_id = c.id WHERE EXTRACT(DAY FROM i.period_month) = 25;
