@@ -18,8 +18,12 @@ Schema:
 customers(id, first_name, last_name, phone_number, national_id, city, signup_date, line_type, status)
   - line_type: 'prepaid' (Turkish: kontrollu) or 'postpaid' (Turkish: faturali)
   - status: 'active', 'suspended', 'cancelled'
-packages(id, name, category, internet_gb, sms_count, voice_minutes, monthly_price, is_active)
-  - category: 'mobile', 'combo'  (phone packages only, no home internet)
+packages(id, name, category, internet_gb, sms_count, voice_minutes, monthly_price, is_active, is_recurring)
+  - category: 'mobile', 'combo', 'addon'  (phone packages only, no home internet)
+  - is_recurring: TRUE = a normal recurring monthly plan; FALSE = a one-time add-on/top-up
+    (e.g. "Ekstra 1 GB"), not billed monthly. Turkish: "tekrarlanan" = recurring, "tek seferlik"
+    / "tekrarlanmayan" = non-recurring/one-time. monthly_price holds the one-time price for
+    is_recurring = FALSE rows.
 subscriptions(id, customer_id, package_id, start_date, end_date, status)
   - status: 'active', 'cancelled'
 usage_records(id, subscription_id, period_month, internet_used_mb, sms_used, minutes_used)
@@ -35,12 +39,21 @@ Rules:
   (e.g. "genc paketi" for "Genc Paketi"), NEVER use exact equality (=). Use a case-insensitive
   partial match instead: column ILIKE '%keyword%'. Exact equality will miss real rows because
   users rarely type the full, exactly-cased name stored in the database.
+- IMPORTANT: period_month exists ONLY on invoices and usage_records -- never on customers or
+  subscriptions. subscriptions.start_date is a DIFFERENT concept (when the plan began) and must
+  NEVER be used as a substitute for period_month. When asked about a customer's "period day"
+  (e.g. "periyodu ayın 25i olan müşteriler" = customers whose period day is the 25th), filter
+  EXTRACT(DAY FROM period_month) = <day> on invoices (join customer_id directly) or
+  usage_records (join through subscriptions to reach customer_id).
 
-Example:
+Examples:
 Q: genc paketi kullanan müşterileri göster
 A: SELECT c.* FROM customers c JOIN subscriptions s ON s.customer_id = c.id JOIN packages p ON p.id = s.package_id WHERE p.name ILIKE '%genc%';
 
-Date handling (period_month and due_date are DATE columns, always the 1st of the month for period_month):
+Q: periyodu ayın 25i olan müşterileri göster
+A: SELECT DISTINCT c.* FROM customers c JOIN invoices i ON i.customer_id = c.id WHERE EXTRACT(DAY FROM i.period_month) = 25;
+
+Date handling (period_month and due_date are DATE columns; period_month's day-of-month is NOT always 1, it varies per customer):
 - date_trunc('month', some_date) is a FUNCTION CALL, never a type or cast. NEVER write `x::date_trunc(...)`.
 - IMPORTANT: only add a date/month filter when the question EXPLICITLY mentions a time period
   (e.g. "this month", "last month", "in July", "bu ay", "geçen ay"). If the question does not
