@@ -252,7 +252,7 @@ def admin_panel():
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT r.id, u.email, u.first_name, u.last_name, r.question, r.sql_query, r.result_rows, r.created_at
+                SELECT r.id, u.email, u.first_name, u.last_name, r.question, r.sql_query, r.result_rows, r.created_at, r.is_fixed
                 FROM reports r
                 JOIN users u ON u.id = r.user_id
                 ORDER BY r.created_at DESC
@@ -270,12 +270,32 @@ def admin_panel():
             "question": r[4],
             "sql": r[5],
             "rows": r[6],
-            "created_at": r[7]
+            "created_at": r[7],
+            "is_fixed": r[8],
         }
         for r in rows
     ]
 
     return render_template("admin.html", reports=reports)
+
+
+@app.route("/reports/<int:report_id>/fix", methods=["POST"])
+@admin_required
+def mark_report_fixed(report_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE reports SET is_fixed = TRUE WHERE id = %s",
+                        (report_id,))
+            updated = cur.rowcount
+            conn.commit()
+
+    finally:
+        conn.close()
+
+    if updated == 0:
+        return jsonify({"error": "Rapor bulunamadı"}), 404
+    return jsonify({"ok":True})
 
 
 if __name__ == "__main__":

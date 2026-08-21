@@ -88,5 +88,6 @@ CREATE TABLE reports (
     question      TEXT NOT NULL,
     sql_query     TEXT,
     result_rows   JSONB,
+    is_fixed      BOOLEAN NOT NULL DEFAULT FALSE,
     created_at    TIMESTAMP NOT NULL DEFAULT NOW()
 );

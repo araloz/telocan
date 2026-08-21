@@ -162,6 +162,40 @@
     font-size: 12px;
     color: var(--muted);
   }
+  .report-card.fixed {
+    opacity: 0.6;
+    border-color: #2e5a41;
+  }
+  .fix-btn {
+    margin-top: 14px;
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .fix-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .fix-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .fixed-badge {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(61, 220, 132, 0.12);
+    border: 1px solid #2e5a41;
+    color: #3ddc84;
+    font-size: 13px;
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -180,7 +214,7 @@
   {% else %}
     {% for report in reports %}
       {% set full_name = ((report.first_name or '') ~ ' ' ~ (report.last_name or '')).strip() %}
-      <div class="report-card">
+      <div class="report-card{{ ' fixed' if report.is_fixed else '' }}">
         <div class="report-meta">
           <span class="report-author">{{ full_name if full_name else report.email }}</span>
           <span class="report-date">{{ report.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
@@ -217,9 +251,37 @@
         {% else %}
           <div class="row-count">Sonuç bulunamadı.</div>
         {% endif %}
+
+        {% if report.is_fixed %}
+          <span class="fixed-badge">Düzeltildi ✓</span>
+        {% else %}
+          <button type="button" class="fix-btn" data-report-id="{{ report.id }}">Düzeltildi Olarak İşaretle</button>
+        {% endif %}
       </div>
     {% endfor %}
   {% endif %}
 </main>
+
+<script>
+document.querySelectorAll('.fix-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const reportId = btn.dataset.reportId;
+    const card = btn.closest('.report-card');
+    btn.disabled = true;
+    try {
+      const resp = await fetch(`/reports/${reportId}/fix`, { method: 'POST' });
+      if (!resp.ok) throw new Error('failed');
+      const badge = document.createElement('span');
+      badge.className = 'fixed-badge';
+      badge.textContent = 'Düzeltildi ✓';
+      btn.replaceWith(badge);
+      card.classList.add('fixed');
+    } catch (err) {
+      btn.disabled = false;
+      alert('Rapor güncellenemedi. Lütfen tekrar deneyin.');
+    }
+  });
+});
+</script>
 </body>
 </html>
