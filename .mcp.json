@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "telocan": {
-      "command": "python",
-      "args": ["server.py"],
-      "cwd": "."
-    }
-  }
-}

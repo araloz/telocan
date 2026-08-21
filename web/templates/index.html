@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Telocan</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2e38;
+    --text: #e6e8ee;
+    --muted: #9aa1ac;
+    --accent: #4f8cff;
+    --user-bubble: #24304a;
+    --assistant-bubble: #1c2028;
+    --error: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  header p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .msg {
+    max-width: 780px;
+    width: 100%;
+    align-self: center;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .msg.user {
+    justify-content: flex-end;
+  }
+  .msg.assistant {
+    justify-content: flex-start;
+  }
+  .msg.error {
+    flex-direction: column;
+    align-items: center;
+  }
+  .msg .role {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .avatar {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .avatar.assistant {
+    background: #f4c430;
+    color: #2b2205;
+  }
+  .avatar.user {
+    background: var(--accent);
+    color: #fff;
+  }
+  .bubble {
+    max-width: 78%;
+    padding: 12px 14px;
+    border-radius: 18px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+  .msg.error .bubble {
+    max-width: 100%;
+  }
+  .msg.user .bubble {
+    background: var(--user-bubble);
+  }
+  .msg.assistant .bubble {
+    background: var(--assistant-bubble);
+    border: 1px solid var(--border);
+  }
+  .msg.error .bubble {
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid var(--error);
+    color: var(--error);
+  }
+  details.sql-block {
+    margin-top: 10px;
+    font-size: 12px;
+  }
+  details.sql-block summary {
+    cursor: pointer;
+    color: var(--muted);
+    user-select: none;
+  }
+  details.sql-block summary:hover {
+    color: var(--text);
+  }
+  details.sql-block pre {
+    margin: 8px 0 0;
+    padding: 10px 12px;
+    background: #0b0d12;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: "SF Mono", Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    color: #c9d1e0;
+  }
+  .result-table-wrap {
+    margin-top: 10px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  table.result-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+  }
+  table.result-table th, table.result-table td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.result-table th {
+    background: #1d222c;
+    color: var(--muted);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+  }
+  table.result-table tr:last-child td {
+    border-bottom: none;
+  }
+  .row-count {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  /* Shared pill-shaped input, reused in both the hero (empty) and bottom (chat) states */
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: #12141a;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+  .pill input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+  }
+  .pill button {
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .pill button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .pill button:hover:not(:disabled) {
+    background: #3f78e0;
+  }
+
+  /* Empty / hero state: centered greeting + pill input, no header or message log */
+  #emptyState {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 20px;
+  }
+  #emptyState h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+  }
+  #emptyState .pill {
+    max-width: 640px;
+    padding: 8px 8px 8px 22px;
+  }
+  #emptyState .pill input {
+    font-size: 16px;
+    padding: 10px 0;
+  }
+  #emptyState .pill button {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  /* Chat state: bottom input bar, pill docked at the end of the message list */
+  #bottomBar {
+    display: none;
+    justify-content: center;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+  }
+  #bottomBar .pill {
+    max-width: 780px;
+    padding: 6px 6px 6px 18px;
+  }
+  #bottomBar .pill input {
+    font-size: 14px;
+    padding: 8px 0;
+  }
+  #bottomBar .pill button {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+  .thinking {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* State toggles */
+  body.state-empty header { display: none; }
+  body.state-empty #messages { display: none; }
+  body.state-empty #bottomBar { display: none; }
+  body.state-empty #emptyState { display: flex; }
+
+  body.state-chat #emptyState { display: none; }
+  body.state-chat #bottomBar { display: flex; }
+</style>
+</head>
+<body class="state-empty">
+<header>
+  <h1>Telocan</h1>
+  <p>Müşteriler, paketler, abonelikler, kullanım ve faturalar hakkında doğal dilde sorular sorun.</p>
+</header>
+
+<div id="emptyState">
+  <h2>Ne öğrenmek istersiniz?</h2>
+  <div class="pill" id="pill">
+    <input id="questionInput" type="text" placeholder="Müşteriler, paketler, kullanım veya faturalar hakkında sorun..." autofocus />
+    <button id="sendBtn" aria-label="Gönder">&#10148;</button>
+  </div>
+</div>
+
+<div id="messages"></div>
+
+<div id="bottomBar"></div>
+
+<script>
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('questionInput');
+const sendBtn = document.getElementById('sendBtn');
+const pillEl = document.getElementById('pill');
+const bottomBarEl = document.getElementById('bottomBar');
+
+let chatStarted = false;
+
+function enterChatState() {
+  if (chatStarted) return;
+  chatStarted = true;
+  bottomBarEl.appendChild(pillEl);
+  document.body.classList.remove('state-empty');
+  document.body.classList.add('state-chat');
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function avatarEl(role) {
+  const a = el('div', 'avatar ' + role);
+  a.textContent = role === 'user' ? 'S' : 'T';
+  return a;
+}
+
+function addMessage(role, text) {
+  const wrap = el('div', 'msg ' + role);
+  const bubble = el('div', 'bubble', text);
+
+  if (role === 'error') {
+    const roleLabel = el('div', 'role', 'Hata');
+    wrap.appendChild(roleLabel);
+    wrap.appendChild(bubble);
+  } else if (role === 'user') {
+    wrap.appendChild(bubble);
+    wrap.appendChild(avatarEl('user'));
+  } else {
+    wrap.appendChild(avatarEl('assistant'));
+    wrap.appendChild(bubble);
+  }
+
+  messagesEl.appendChild(wrap);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return { wrap, bubble };
+}
+
+function buildResultTable(rows) {
+  if (!rows || rows.length === 0) {
+    return el('div', 'row-count', 'Sonuç bulunamadı.');
+  }
+  const cols = Object.keys(rows[0]);
+  const wrap = el('div', 'result-table-wrap');
+  const table = el('table', 'result-table');
+  const thead = el('thead');
+  const headRow = el('tr');
+  cols.forEach(c => headRow.appendChild(el('th', null, c)));
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = el('tbody');
+  rows.forEach(row => {
+    const tr = el('tr');
+    cols.forEach(c => {
+      let val = row[c];
+      if (val === null || val === undefined) val = '';
+      tr.appendChild(el('td', null, String(val)));
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+
+  const countLine = el('div', 'row-count', `${rows.length} satır`);
+  const container = document.createDocumentFragment();
+  container.appendChild(wrap);
+  container.appendChild(countLine);
+  return container;
+}
+
+function addAssistantResult(result) {
+  const { bubble } = addMessage('assistant', '');
+  bubble.appendChild(buildResultTable(result.rows));
+
+  const details = el('details', 'sql-block');
+  const summary = el('summary', null, "Oluşturulan SQL'i göster");
+  const pre = el('pre', null, result.sql);
+  details.appendChild(summary);
+  details.appendChild(pre);
+  bubble.appendChild(details);
+}
+
+async function sendQuestion() {
+  const question = inputEl.value.trim();
+  if (!question) return;
+
+  enterChatState();
+  addMessage('user', question);
+  inputEl.value = '';
+  sendBtn.disabled = true;
+
+  const { wrap: thinkingWrap, bubble: thinkingBubble } = addMessage('assistant', '');
+  thinkingBubble.innerHTML = '<span class="thinking">Düşünüyor…</span>';
+
+  try {
+    const resp = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question })
+    });
+    const data = await resp.json();
+    thinkingWrap.remove();
+
+    if (!resp.ok) {
+      addMessage('error', data.error || 'Bir şeyler ters gitti.');
+    } else {
+      addAssistantResult(data);
+    }
+  } catch (err) {
+    thinkingWrap.remove();
+    addMessage('error', 'Ağ hatası: ' + err.message);
+  } finally {
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+sendBtn.addEventListener('click', sendQuestion);
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendQuestion();
+});
+</script>
+</body>
+</html>

@@ -49,3 +49,12 @@ CREATE TABLE invoices (
     is_paid       BOOLEAN NOT NULL DEFAULT FALSE,
     due_date      DATE NOT NULL
 );
+
+-- App users (people who log into the Telocan web app itself -- separate from `customers`,
+-- which represents telecom customers in the simulated dataset).
+CREATE TABLE users (
+    id            SERIAL PRIMARY KEY,
+    email         TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+);
