@@ -31,6 +31,14 @@ Rules:
 - Map user terms: "kontrollu"/"prepaid" -> line_type = 'prepaid'; "faturali"/"postpaid" -> line_type = 'postpaid'.
 - Always join through subscriptions when a question spans customers and packages/usage.
 - If the question is ambiguous, make the most reasonable assumption and just generate the query.
+- When filtering by a package name or any other free-text name the user refers to informally
+  (e.g. "genc paketi" for "Genc Paketi"), NEVER use exact equality (=). Use a case-insensitive
+  partial match instead: column ILIKE '%keyword%'. Exact equality will miss real rows because
+  users rarely type the full, exactly-cased name stored in the database.
+
+Example:
+Q: genc paketi kullanan müşterileri göster
+A: SELECT c.* FROM customers c JOIN subscriptions s ON s.customer_id = c.id JOIN packages p ON p.id = s.package_id WHERE p.name ILIKE '%genc%';
 
 Date handling (period_month and due_date are DATE columns, always the 1st of the month for period_month):
 - date_trunc('month', some_date) is a FUNCTION CALL, never a type or cast. NEVER write `x::date_trunc(...)`.
