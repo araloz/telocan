@@ -196,17 +196,97 @@
     font-size: 13px;
     font-weight: 600;
   }
+  .panel {
+    display: none;
+  }
+  .panel.active {
+    display: block;
+  }
+  .user-search-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #0f1115;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .user-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .user-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+  }
+  .user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .user-email {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .admin-badge {
+    flex-shrink: 0;
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(79, 140, 255, 0.12);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .make-admin-btn {
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .make-admin-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .make-admin-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 </style>
 </head>
 <body>
 <nav>
   <a href="/">Telocan</a>
-  <a href="/admin" class="active">Raporlar</a>
+  <a href="#" class="tab-link active" data-panel="reportsPanel">Raporlar</a>
+  <a href="#" class="tab-link" data-panel="usersPanel">Yöneticiler</a>
   <div class="spacer"></div>
   <a class="logout-link" href="/logout">Çıkış Yap</a>
 </nav>
 
 <main>
+<div id="reportsPanel" class="panel active">
   <h1>Raporlar</h1>
 
   {% if not reports %}
@@ -260,6 +340,13 @@
       </div>
     {% endfor %}
   {% endif %}
+</div>
+
+<div id="usersPanel" class="panel">
+  <h1>Yöneticiler</h1>
+  <input type="text" id="userSearchInput" class="user-search-input" placeholder="E-posta ile ara...">
+  <div id="userResults"></div>
+</div>
 </main>
 
 <script>
@@ -281,6 +368,109 @@ document.querySelectorAll('.fix-btn').forEach(btn => {
       alert('Rapor güncellenemedi. Lütfen tekrar deneyin.');
     }
   });
+});
+
+const tabLinks = document.querySelectorAll('.tab-link');
+const panels = document.querySelectorAll('.panel');
+let usersLoaded = false;
+
+tabLinks.forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const targetId = link.dataset.panel;
+    tabLinks.forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    panels.forEach(p => p.classList.toggle('active', p.id === targetId));
+    if (targetId === 'usersPanel' && !usersLoaded) {
+      usersLoaded = true;
+      searchUsers('');
+    }
+  });
+});
+
+const userSearchInput = document.getElementById('userSearchInput');
+const userResultsEl = document.getElementById('userResults');
+let userSearchTimer = null;
+
+function userDisplayName(user) {
+  const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+  return fullName || user.email;
+}
+
+function buildUserRow(user) {
+  const row = document.createElement('div');
+  row.className = 'user-row';
+
+  const info = document.createElement('div');
+  info.className = 'user-info';
+  const nameEl = document.createElement('span');
+  nameEl.className = 'user-name';
+  nameEl.textContent = userDisplayName(user);
+  const emailEl = document.createElement('span');
+  emailEl.className = 'user-email';
+  emailEl.textContent = user.email;
+  info.appendChild(nameEl);
+  info.appendChild(emailEl);
+  row.appendChild(info);
+
+  if (user.is_admin) {
+    const badge = document.createElement('span');
+    badge.className = 'admin-badge';
+    badge.textContent = 'Yönetici';
+    row.appendChild(badge);
+  } else {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'make-admin-btn';
+    btn.textContent = 'Yönetici Yap';
+    btn.addEventListener('click', () => makeAdmin(user.id, btn));
+    row.appendChild(btn);
+  }
+
+  return row;
+}
+
+async function makeAdmin(userId, btn) {
+  btn.disabled = true;
+  try {
+    const resp = await fetch(`/admin/users/${userId}/make-admin`, { method: 'POST' });
+    if (!resp.ok) throw new Error('failed');
+    const badge = document.createElement('span');
+    badge.className = 'admin-badge';
+    badge.textContent = 'Yönetici';
+    btn.replaceWith(badge);
+  } catch (err) {
+    btn.disabled = false;
+    alert('Kullanıcı güncellenemedi. Lütfen tekrar deneyin.');
+  }
+}
+
+async function searchUsers(query) {
+  try {
+    const resp = await fetch(`/admin/users?q=${encodeURIComponent(query)}`);
+    if (!resp.ok) throw new Error('failed');
+    const users = await resp.json();
+    userResultsEl.innerHTML = '';
+    if (!users.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'Kullanıcı bulunamadı.';
+      userResultsEl.appendChild(empty);
+      return;
+    }
+    users.forEach(u => userResultsEl.appendChild(buildUserRow(u)));
+  } catch (err) {
+    userResultsEl.innerHTML = '';
+    const errEl = document.createElement('div');
+    errEl.className = 'empty-state';
+    errEl.textContent = 'Kullanıcılar yüklenemedi.';
+    userResultsEl.appendChild(errEl);
+  }
+}
+
+userSearchInput.addEventListener('input', () => {
+  clearTimeout(userSearchTimer);
+  userSearchTimer = setTimeout(() => searchUsers(userSearchInput.value.trim()), 300);
 });
 </script>
 </body>
