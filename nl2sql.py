@@ -50,6 +50,14 @@ Rules:
   any Turkish characters to their plain ASCII equivalents: ı/İ->i/I, ş/Ş->s/S, ğ/Ğ->g/G,
   ü/Ü->u/U, ö/Ö->o/O, ç/Ç->c/C. E.g. "sınırsız konuşma" -> "sinirsiz konusma". Never put
   diacritics inside an ILIKE pattern -- they will never match.
+- IMPORTANT: when building an ILIKE pattern for a package/name lookup, use ONLY the core
+  distinctive keyword likely to actually appear in the stored name (e.g. "sinirsiz", "premium",
+  "ekstra", "genc") -- NEVER glue on adjacent descriptive/feature words from the question (e.g.
+  "dakika"/minutes, "paketi"/package) that describe a FEATURE rather than being part of the
+  actual name. "sınırsız dakika" (unlimited minutes) is a feature description, not a name --
+  search ILIKE '%sinirsiz%' alone, don't search for '%sinirsiz dakika%'. If a feature question
+  has no matching name keyword at all, filter on the actual numeric column instead (e.g.
+  ORDER BY voice_minutes DESC for "which package has the most minutes").
 - IMPORTANT: period_month exists ONLY on invoices and usage_records -- never on customers or
   subscriptions. subscriptions.start_date is a DIFFERENT concept (when the plan began) and must
   NEVER be used as a substitute for period_month. When asked about a customer's "period day"
@@ -63,6 +71,9 @@ A: SELECT c.* FROM customers c JOIN subscriptions s ON s.customer_id = c.id JOIN
 
 Q: sınırsız konuşma paketi ne kadar
 A: SELECT monthly_price FROM packages WHERE name ILIKE '%sinirsiz konusma%';
+
+Q: hangi paketlerde sınırsız dakika var?
+A: SELECT name FROM packages WHERE name ILIKE '%sinirsiz%';
 
 Q: periyodu ayın 25i olan müşterileri göster
 A: SELECT DISTINCT c.* FROM customers c JOIN invoices i ON i.customer_id = c.id WHERE EXTRACT(DAY FROM i.period_month) = 25;
