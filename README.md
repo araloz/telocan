@@ -1,6 +1,6 @@
 # Telocan
 
-A Turkcell-style telecom demo project: a PostgreSQL database of customers, packages,
+A telecom demo project: a PostgreSQL database of customers, packages,
 subscriptions, usage, and invoices, queried in **natural language (Turkish)** through a locally
 running LLM (via [Ollama](https://ollama.com)) that translates questions into SQL. Includes an
 MCP server for use with Claude Code/Desktop, and a Flask web app with login, chat history, a
