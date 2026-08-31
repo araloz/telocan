@@ -1061,11 +1061,8 @@ async function submitQuestion(question) {
       addMessage('error', data.error || 'Bir şeyler ters gitti.');
     } else {
       addAssistantResult(data);
-      const isNewConversation = currentConversationId === null;
       currentConversationId = data.conversation_id;
-      if (isNewConversation) {
-        await loadConversationList();
-      }
+      await loadConversationList();
       setActiveConversation(currentConversationId);
     }
   } catch (err) {
