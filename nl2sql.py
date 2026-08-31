@@ -271,6 +271,28 @@ def ask_database(question: str, history: list[dict] | None = None) -> dict:
     return {"question": question, "sql": sql, "rows": rows}
 
 
+EXPLAIN_PROMPT = """Aşağıdaki SQL sorgusunu, SQL bilmeyen bir kullanıcıya Türkçe olarak, basit ve
+kısa bir şekilde açıkla. Teknik SQL terimleri kullanma (JOIN, WHERE, GROUP BY gibi kelimelerden
+kaçın) -- bunun yerine "hangi veriyi getirdiğini" günlük dilde anlat, 2-3 cümleyi geçme.
+
+SQL:
+{sql}
+
+Açıklama:
+"""
+
+
+def explain_sql(sql: str) -> str:
+    prompt = EXPLAIN_PROMPT.format(sql=sql)
+    response = requests.post(
+        f"{OLLAMA_URL}/api/generate",
+        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()["response"].strip()
+
+
 if __name__ == "__main__":
     print(f"Connected to Ollama model '{OLLAMA_MODEL}'. Type a question (or 'quit').")
     while True:

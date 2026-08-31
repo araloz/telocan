@@ -13,7 +13,7 @@ import psycopg2
 # nl2sql.py lives one directory up from this file.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from nl2sql import ask_database  # noqa: E402
+from nl2sql import ask_database, explain_sql  # noqa: E402
 
 app = Flask(__name__)
 app.secret_key = os.environ["FLASK_SECRET_KEY"]  # Set this in your environment for session security
@@ -430,6 +430,21 @@ def chat():
 
     result["conversation_id"] = conversation_id
     return jsonify(result)
+
+
+@app.route("/explain-sql", methods=["POST"])
+@login_required
+def explain_sql_route():
+    data = request.get_json(silent=True) or {}
+    sql = (data.get("sql")or"").strip()
+    if not sql:
+        return jsonify({"error": "SQL gerekli."}), 400
+    try:
+        explanation = explain_sql(sql)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"explanation": explanation})
 
 
 @app.route("/reports", methods=["POST"])
