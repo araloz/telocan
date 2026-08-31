@@ -92,12 +92,12 @@ def conversation_messages(conv_id):
             if not owner or owner[0] != session["user_id"]:
                 return jsonify({"error":"not found"}),404
 
-            cur.execute("SELECT question, sql_query, result_rows, created_at FROM chat_messages "
+            cur.execute("SELECT question, sql_query, result_rows, timing, created_at FROM chat_messages "
                 "WHERE conversation_id = %s ORDER BY created_at ASC", (conv_id,),
             )
             rows = cur.fetchall()
             return jsonify([
-                {"question": r[0], "sql": r[1], "rows": r[2], "created_at": r[3].isoformat()} 
+                {"question": r[0], "sql": r[1], "rows": r[2], "timing": r[3], "created_at": r[4].isoformat()}
                 for r in rows
             ])
     finally:
@@ -420,9 +420,15 @@ def chat():
                 conversation_id = cur.fetchone()[0]
 
             cur.execute(
-                "INSERT INTO chat_messages (conversation_id, question, sql_query, result_rows) "
-                "VALUES (%s, %s, %s, %s)",
-                (conversation_id, result["question"], result["sql"], psycopg2.extras.Json(result["rows"], dumps=lambda obj: json.dumps(obj, default=str))),
+                "INSERT INTO chat_messages (conversation_id, question, sql_query, result_rows, timing) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (
+                    conversation_id,
+                    result["question"],
+                    result["sql"],
+                    psycopg2.extras.Json(result["rows"], dumps=lambda obj: json.dumps(obj, default=str)),
+                    psycopg2.extras.Json(result.get("timing")),
+                ),
             )
             conn.commit()
     finally:

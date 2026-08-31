@@ -753,7 +753,7 @@ async function loadConversation(id) {
     messagesEl.innerHTML = '';
     msgs.forEach(m => {
       addMessage('user', m.question);
-      addAssistantResult({ question: m.question, sql: m.sql, rows: m.rows });
+      addAssistantResult({ question: m.question, sql: m.sql, rows: m.rows, timing: m.timing });
     });
 
     currentConversationId = id;

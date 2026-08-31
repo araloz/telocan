@@ -77,6 +77,7 @@ CREATE TABLE chat_messages (
     question         TEXT NOT NULL,
     sql_query        TEXT,
     result_rows      JSONB,
+    timing           JSONB,
     created_at       TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
