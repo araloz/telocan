@@ -3,6 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <title>Telocan</title>
+<script>
+  // Apply the stored theme before first paint to avoid a flash of the wrong theme.
+  (function () {
+    try {
+      if (localStorage.getItem('telocan-theme') === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    } catch (e) {}
+  })();
+</script>
 <style>
   :root {
     --bg: #0f1115;
@@ -14,6 +24,27 @@
     --user-bubble: #24304a;
     --assistant-bubble: #1c2028;
     --error: #ff6b6b;
+    --hover-bg: #1d222c;
+    --code-bg: #0b0d12;
+    --code-text: #c9d1e0;
+    --pill-bg: #12141a;
+    --accent-hover: #3f78e0;
+  }
+  [data-theme="light"] {
+    --bg: #f7f8fa;
+    --panel: #ffffff;
+    --border: #d8dce3;
+    --text: #1a1d23;
+    --muted: #6b7280;
+    --accent: #2f6fed;
+    --user-bubble: #d9e6ff;
+    --assistant-bubble: #f0f2f5;
+    --error: #d92d20;
+    --hover-bg: #eef1f5;
+    --code-bg: #f4f6f8;
+    --code-text: #1f2937;
+    --pill-bg: #f0f2f5;
+    --accent-hover: #2559c9;
   }
   * { box-sizing: border-box; }
   body {
@@ -82,7 +113,7 @@
     font-size: 13px;
   }
   .conv-item:hover {
-    background: #1d222c;
+    background: var(--hover-bg);
     color: var(--text);
   }
   .conv-item.active {
@@ -158,6 +189,25 @@
     color: var(--text);
     border-color: var(--accent);
   }
+  .theme-toggle {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .theme-toggle:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+  .theme-toggle .theme-icon-light { display: none; }
+  [data-theme="light"] .theme-toggle .theme-icon-dark { display: none; }
+  [data-theme="light"] .theme-toggle .theme-icon-light { display: inline; }
   #messages {
     flex: 1;
     overflow-y: auto;
@@ -301,13 +351,13 @@
   details.sql-block pre {
     margin: 8px 0 0;
     padding: 10px 12px;
-    background: #0b0d12;
+    background: var(--code-bg);
     border: 1px solid var(--border);
     border-radius: 8px;
     overflow-x: auto;
     font-family: "SF Mono", Consolas, Menlo, monospace;
     font-size: 12.5px;
-    color: #c9d1e0;
+    color: var(--code-text);
   }
   .result-table-wrap {
     margin-top: 10px;
@@ -327,7 +377,7 @@
     white-space: nowrap;
   }
   table.result-table th {
-    background: #1d222c;
+    background: var(--hover-bg);
     color: var(--muted);
     font-weight: 600;
     position: sticky;
@@ -347,7 +397,7 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    background: #12141a;
+    background: var(--pill-bg);
     border: 1px solid var(--border);
     border-radius: 999px;
   }
@@ -376,7 +426,7 @@
     cursor: default;
   }
   .pill button:hover:not(:disabled) {
-    background: #3f78e0;
+    background: var(--accent-hover);
   }
 
   /* Empty / hero state: centered greeting + pill input, no header or message log */
@@ -459,6 +509,7 @@
     <h1>Telocan</h1>
     <p>Müşteriler, paketler, abonelikler, kullanım ve faturalar hakkında doğal dilde sorular sorun.</p>
   </div>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Temayı değiştir" title="Temayı değiştir"><span class="theme-icon-dark">🌙</span><span class="theme-icon-light">☀️</span></button>
   {% if is_admin %}<a class="logout-link" href="/admin">Admin Paneli</a>{% endif %}
   <a class="logout-link" href="/settings">Ayarlar</a>
   <a class="logout-link" href="/logout">Çıkış Yap</a>
@@ -789,6 +840,19 @@ async function retryQuestion(question, btn) {
 sendBtn.addEventListener('click', sendQuestion);
 inputEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') sendQuestion();
+});
+
+const themeToggleBtn = document.getElementById('themeToggle');
+themeToggleBtn.addEventListener('click', () => {
+  const goingLight = document.documentElement.getAttribute('data-theme') !== 'light';
+  if (goingLight) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  try {
+    localStorage.setItem('telocan-theme', goingLight ? 'light' : 'dark');
+  } catch (e) {}
 });
 
 loadConversationList();
