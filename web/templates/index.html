@@ -245,7 +245,7 @@
     min-width: 0;
     margin-top: 0;
   }
-  .report-btn {
+  .report-btn, .retry-btn {
     flex-shrink: 0;
     border: none;
     background: transparent;
@@ -256,11 +256,11 @@
     padding: 4px 6px;
     border-radius: 6px;
   }
-  .report-btn:hover:not(:disabled) {
+  .report-btn:hover:not(:disabled), .retry-btn:hover:not(:disabled) {
     color: var(--accent);
     background: rgba(79, 140, 255, 0.1);
   }
-  .report-btn:disabled {
+  .report-btn:disabled, .retry-btn:disabled {
     opacity: 0.5;
     cursor: default;
   }
@@ -711,6 +711,12 @@ function addAssistantResult(result) {
   details.appendChild(summary);
   details.appendChild(pre);
 
+  const retryBtn = el('button', 'retry-btn', '🔄');
+  retryBtn.type = 'button';
+  retryBtn.title = 'Tekrar dene';
+  retryBtn.setAttribute('aria-label', 'Tekrar dene');
+  retryBtn.addEventListener('click', () => retryQuestion(result.question, retryBtn));
+
   const reportBtn = el('button', 'report-btn', '🚩');
   reportBtn.type = 'button';
   reportBtn.title = 'Bu yanıtı raporla';
@@ -719,18 +725,13 @@ function addAssistantResult(result) {
 
   const sqlRow = el('div', 'sql-row');
   sqlRow.appendChild(details);
+  sqlRow.appendChild(retryBtn);
   sqlRow.appendChild(reportBtn);
   bubble.appendChild(sqlRow);
 }
 
-async function sendQuestion() {
-  const question = inputEl.value.trim();
-  if (!question) return;
-
-  enterChatState();
+async function submitQuestion(question) {
   addMessage('user', question);
-  inputEl.value = '';
-  sendBtn.disabled = true;
 
   const { wrap: thinkingWrap, bubble: thinkingBubble } = addMessage('assistant', '');
   thinkingBubble.innerHTML = '<span class="thinking">Düşünüyor…</span>';
@@ -758,9 +759,29 @@ async function sendQuestion() {
   } catch (err) {
     thinkingWrap.remove();
     addMessage('error', 'Ağ hatası: ' + err.message);
+  }
+}
+
+async function sendQuestion() {
+  const question = inputEl.value.trim();
+  if (!question) return;
+
+  enterChatState();
+  inputEl.value = '';
+  sendBtn.disabled = true;
+
+  await submitQuestion(question);
+
+  sendBtn.disabled = false;
+  inputEl.focus();
+}
+
+async function retryQuestion(question, btn) {
+  btn.disabled = true;
+  try {
+    await submitQuestion(question);
   } finally {
-    sendBtn.disabled = false;
-    inputEl.focus();
+    btn.disabled = false;
   }
 }
 
