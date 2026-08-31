@@ -91,3 +91,15 @@ CREATE TABLE reports (
     is_fixed      BOOLEAN NOT NULL DEFAULT FALSE,
     created_at    TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- Every question asked, successful or not -- for spotting failure patterns proactively,
+-- separate from user-submitted reports (which only capture what someone bothered to flag).
+CREATE TABLE query_log (
+    id            SERIAL PRIMARY KEY,
+    user_id       INTEGER NOT NULL REFERENCES users(id),
+    question      TEXT NOT NULL,
+    sql_query     TEXT,
+    success       BOOLEAN NOT NULL,
+    error_message TEXT,
+    created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+);

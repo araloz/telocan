@@ -22,6 +22,17 @@ def get_db_connection():
     return psycopg2.connect(os.environ["DATABASE_URL"])  # Set this in your environment
 
 
+def log_query(user_id, question, sql, success, error):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO query_log (user_id, question, sql_query, success, error_message) VALUES (%s, %s, %s, %s, %s)",
+                (user_id, question, sql, success, error),)
+            conn.commit()
+    finally:
+        conn.close()
+
+
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
@@ -207,7 +218,10 @@ def chat():
     try:
         result = ask_database(question, history = history)
     except Exception as e:
+        log_query(session["user_id"], question, sql=None, success=False, error=str(e))
         return jsonify({"error": str(e)}), 500
+
+    log_query(session["user_id"], question, sql=result["sql"], success=True, error=None)
 
     conn = get_db_connection()
     try:
