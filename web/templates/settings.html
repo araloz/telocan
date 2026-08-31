@@ -107,6 +107,22 @@
     color: var(--accent);
     text-decoration: none;
   }
+  .danger-zone {
+    margin-top: 28px;
+    padding: 16px;
+    border: 1px solid var(--error);
+    border-radius: 8px;
+    background: rgba(255, 107, 107, 0.06);
+  }
+  .danger-zone .section-title {
+    color: var(--error);
+  }
+  .danger-zone button {
+    background: var(--error);
+  }
+  .danger-zone button:hover {
+    background: #e04f4f;
+  }
 </style>
 </head>
 <body>
@@ -134,6 +150,16 @@
     </form>
     <div class="link"><a href="/forgot-password">Şifremi Unuttum</a></div>
     <div class="link"><a href="/">← Telocan'a dön</a></div>
+
+    <div class="danger-zone">
+      <p class="section-title">Tehlikeli Bölge</p>
+      <p class="helper">Hesabınızı sildiğinizde tüm sohbetleriniz, raporlarınız ve verileriniz kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
+      <form method="POST" action="/delete-account" onsubmit="return confirm('Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.');">
+        <label for="delete_current_password">Şifrenizi girerek onaylayın</label>
+        <input type="password" id="delete_current_password" name="current_password" autocomplete="current-password" required>
+        <button type="submit">Hesabımı Sil</button>
+      </form>
+    </div>
   </div>
 </body>
 </html>

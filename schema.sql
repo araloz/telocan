@@ -66,7 +66,7 @@ CREATE TABLE users (
 -- One row per chat session, owned by a user.
 CREATE TABLE conversations (
     id          SERIAL PRIMARY KEY,
-    user_id     INTEGER NOT NULL REFERENCES users(id),
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -84,7 +84,7 @@ CREATE TABLE chat_messages (
 -- the report survives even if the underlying conversation is later deleted.
 CREATE TABLE reports (
     id            SERIAL PRIMARY KEY,
-    user_id       INTEGER NOT NULL REFERENCES users(id),
+    user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     question      TEXT NOT NULL,
     sql_query     TEXT,
     result_rows   JSONB,
@@ -96,7 +96,7 @@ CREATE TABLE reports (
 -- separate from user-submitted reports (which only capture what someone bothered to flag).
 CREATE TABLE query_log (
     id            SERIAL PRIMARY KEY,
-    user_id       INTEGER NOT NULL REFERENCES users(id),
+    user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     question      TEXT NOT NULL,
     sql_query     TEXT,
     success       BOOLEAN NOT NULL,
@@ -107,7 +107,7 @@ CREATE TABLE query_log (
 -- Single-use, time-limited tokens for the "forgot password" email flow.
 CREATE TABLE password_resets (
     id          SERIAL PRIMARY KEY,
-    user_id     INTEGER NOT NULL REFERENCES users(id),
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token       TEXT NOT NULL UNIQUE,
     expires_at  TIMESTAMP NOT NULL,
     used        BOOLEAN NOT NULL DEFAULT FALSE,

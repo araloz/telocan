@@ -318,6 +318,37 @@ def settings():
         last_name=current_last,
     )
 
+
+@app.route("/delete-account", methods =["POST"])
+@login_required 
+def delete_account():
+    current_password = request.form.get("current_password","")
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT email, first_name, last_name, password_hash FROM users WHERE id = %s",
+                (session["user_id"],),)
+            email, first_name, last_name, password_hash = cur.fetchone()
+
+            if not current_password or not check_password_hash(password_hash, current_password):
+                return render_template(
+                    "settings.html",
+                    error="Şifre yanlış. Hesabınız silinmedi.",
+                    success=None,
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+            cur.execute("DELETE FROM users WHERE id = %s", (session["user_id"],))
+            conn.commit()
+
+    finally:
+        conn.close()
+
+    session.clear()
+    return redirect(url_for("login"))
+
                 
 
 
