@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 import requests
 import psycopg2
 import psycopg2.extras
@@ -265,10 +266,22 @@ def run_query(sql: str) -> list[dict]:
 
 
 def ask_database(question: str, history: list[dict] | None = None) -> dict:
+    llm_start = time.monotonic()
     sql = generate_sql(question, history)
+    llm_ms = round((time.monotonic() - llm_start) * 1000)
+
     validate_sql(sql)
+
+    db_start = time.monotonic()
     rows = run_query(sql)
-    return {"question": question, "sql": sql, "rows": rows}
+    db_ms = round((time.monotonic() - db_start) * 1000)
+
+    return {
+        "question": question,
+        "sql": sql,
+        "rows": rows,
+        "timing": {"llm_ms": llm_ms, "db_ms": db_ms, "total_ms": llm_ms + db_ms},
+    }
 
 
 EXPLAIN_PROMPT = """Aşağıdaki SQL sorgusunu, SQL bilmeyen bir kullanıcıya Türkçe olarak, basit ve
