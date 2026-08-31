@@ -387,5 +387,51 @@ def revoke_admin(user_id):
     return jsonify({"ok": True})
 
 
+@app.route("/admin/query-log")
+@admin_required
+def admin_query_log():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT q.id, u.email, u.first_name, u.last_name, q.question, q.sql_query,
+                       q.success, q.error_message, q.created_at
+                FROM query_log q
+                JOIN users u ON u.id = q.user_id
+                ORDER BY q.created_at DESC
+                LIMIT 100
+            """)
+            rows = cur.fetchall()
+            cur.execute("SELECT COUNT(*) FILTER (WHERE success), COUNT(*) FROM query_log")
+            success_count, total_count = cur.fetchone()
+
+    finally:
+        conn.close()
+
+    logs = [
+        {
+            "id": r[0],
+            "email": r[1],
+            "first_name": r[2],
+            "last_name": r[3],
+            "question": r[4],
+            "sql": r[5],
+            "success": r[6],
+            "error": r[7],
+            "created_at": r[8].isoformat(),
+        }
+        for r in rows
+    ]
+
+    success_rate = round(100* success_count / total_count, 1) if total_count else None
+
+    return jsonify({
+        "logs": logs,
+        "success_count": success_count,
+        "total_count": total_count,
+        "success_rate": success_rate,
+    })
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
