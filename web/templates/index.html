@@ -345,7 +345,7 @@
     min-width: 0;
     margin-top: 0;
   }
-  .report-btn, .retry-btn {
+  .report-btn, .retry-btn, .csv-btn {
     flex-shrink: 0;
     border: none;
     background: transparent;
@@ -356,11 +356,11 @@
     padding: 4px 6px;
     border-radius: 6px;
   }
-  .report-btn:hover:not(:disabled), .retry-btn:hover:not(:disabled) {
+  .report-btn:hover:not(:disabled), .retry-btn:hover:not(:disabled), .csv-btn:hover:not(:disabled) {
     color: var(--accent);
     background: rgba(79, 140, 255, 0.1);
   }
-  .report-btn:disabled, .retry-btn:disabled {
+  .report-btn:disabled, .retry-btn:disabled, .csv-btn:disabled {
     opacity: 0.5;
     cursor: default;
   }
@@ -809,6 +809,38 @@ async function sendReport(result, btn) {
   }
 }
 
+function csvField(val) {
+  if (val === null || val === undefined) return '';
+  const s = String(val);
+  if (/[",\n\r]/.test(s)) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function rowsToCsv(rows) {
+  const cols = Object.keys(rows[0]);
+  const lines = [cols.map(csvField).join(',')];
+  rows.forEach(row => {
+    lines.push(cols.map(c => csvField(row[c])).join(','));
+  });
+  return lines.join('\r\n');
+}
+
+function downloadCsv(rows) {
+  const csv = rowsToCsv(rows);
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `telocan-sonuclar-${ts}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 function addAssistantResult(result) {
   const { bubble } = addMessage('assistant', '');
   bubble.appendChild(buildResultTable(result.rows));
@@ -835,6 +867,16 @@ function addAssistantResult(result) {
   sqlRow.appendChild(details);
   sqlRow.appendChild(retryBtn);
   sqlRow.appendChild(reportBtn);
+
+  if (result.rows && result.rows.length > 0) {
+    const csvBtn = el('button', 'csv-btn', '📥');
+    csvBtn.type = 'button';
+    csvBtn.title = 'CSV olarak indir';
+    csvBtn.setAttribute('aria-label', 'CSV olarak indir');
+    csvBtn.addEventListener('click', () => downloadCsv(result.rows));
+    sqlRow.appendChild(csvBtn);
+  }
+
   bubble.appendChild(sqlRow);
 }
 
