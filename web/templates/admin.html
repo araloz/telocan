@@ -224,6 +224,26 @@
     font-size: 13px;
     font-weight: 600;
   }
+  .delete-btn {
+    margin-top: 14px;
+    margin-left: 8px;
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .delete-btn:hover:not(:disabled) {
+    border-color: var(--error);
+    color: var(--error);
+  }
+  .delete-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
   .panel {
     display: none;
   }
@@ -396,6 +416,57 @@
     font-size: 13px;
     line-height: 1.4;
   }
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+  .confirm-dialog {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    max-width: 400px;
+    width: calc(100% - 40px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+  .confirm-message {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+  .confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .confirm-actions button {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+  }
+  .confirm-cancel-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .confirm-ok-btn {
+    border-color: var(--error);
+    color: var(--error);
+  }
+  .confirm-ok-btn:hover {
+    background: var(--error);
+    color: #fff;
+  }
 </style>
 </head>
 <body>
@@ -467,6 +538,7 @@
         {% else %}
           <button type="button" class="fix-btn" data-report-id="{{ report.id }}">Düzeltildi Olarak İşaretle</button>
         {% endif %}
+        <button type="button" class="delete-btn" data-report-id="{{ report.id }}" title="Raporu sil" aria-label="Raporu sil">🗑</button>
       </div>
     {% endfor %}
   {% endif %}
@@ -486,6 +558,56 @@
 </main>
 
 <script>
+function showConfirmModal(message, confirmButtonText) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'confirm-dialog';
+
+    const msg = document.createElement('div');
+    msg.className = 'confirm-message';
+    msg.textContent = message;
+
+    const actions = document.createElement('div');
+    actions.className = 'confirm-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'confirm-cancel-btn';
+    cancelBtn.textContent = 'İptal';
+
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'confirm-ok-btn';
+    okBtn.textContent = confirmButtonText || 'Sil';
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(okBtn);
+    dialog.appendChild(msg);
+    dialog.appendChild(actions);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    function cleanup(result) {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      resolve(result);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') cleanup(false);
+    }
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) cleanup(false);
+    });
+    cancelBtn.addEventListener('click', () => cleanup(false));
+    okBtn.addEventListener('click', () => cleanup(true));
+    document.addEventListener('keydown', onKey);
+    okBtn.focus();
+  });
+}
+
 document.querySelectorAll('.fix-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
     const reportId = btn.dataset.reportId;
@@ -504,6 +626,23 @@ document.querySelectorAll('.fix-btn').forEach(btn => {
     } catch (err) {
       btn.disabled = false;
       alert('Rapor güncellenemedi. Lütfen tekrar deneyin.');
+    }
+  });
+});
+
+document.querySelectorAll('.delete-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    if (!await showConfirmModal('Bu raporu kalıcı olarak silmek istediğinizden emin misiniz?', 'Sil')) return;
+    const reportId = btn.dataset.reportId;
+    const card = btn.closest('.report-card');
+    btn.disabled = true;
+    try {
+      const resp = await fetch(`/reports/${reportId}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('failed');
+      card.remove();
+    } catch (err) {
+      btn.disabled = false;
+      alert('Rapor silinemedi. Lütfen tekrar deneyin.');
     }
   });
 });

@@ -170,6 +170,57 @@
   .danger-zone button:hover {
     background: #e04f4f;
   }
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+  .confirm-dialog {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    max-width: 400px;
+    width: calc(100% - 40px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+  .confirm-message {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+  .confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .confirm-actions button {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+  }
+  .confirm-cancel-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .confirm-ok-btn {
+    border-color: var(--error);
+    color: var(--error);
+  }
+  .confirm-ok-btn:hover {
+    background: var(--error);
+    color: #fff;
+  }
 </style>
 </head>
 <body>
@@ -210,7 +261,7 @@
       <div class="danger-zone">
         <p class="section-title">Tehlikeli Bölge</p>
         <p class="helper">Hesabınızı sildiğinizde tüm sohbetleriniz, raporlarınız ve verileriniz kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
-        <form method="POST" action="/delete-account" onsubmit="return confirm('Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.');">
+        <form method="POST" action="/delete-account" id="deleteAccountForm">
           <label for="delete_current_password">Şifrenizi girerek onaylayın</label>
           <input type="password" id="delete_current_password" name="current_password" autocomplete="current-password" required>
           <button type="submit">Hesabımı Sil</button>
@@ -232,6 +283,68 @@ tabLinks.forEach(link => {
     link.classList.add('active');
     panels.forEach(p => p.classList.toggle('active', p.id === targetId));
   });
+});
+
+function showConfirmModal(message, confirmButtonText) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'confirm-dialog';
+
+    const msg = document.createElement('div');
+    msg.className = 'confirm-message';
+    msg.textContent = message;
+
+    const actions = document.createElement('div');
+    actions.className = 'confirm-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'confirm-cancel-btn';
+    cancelBtn.textContent = 'İptal';
+
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'confirm-ok-btn';
+    okBtn.textContent = confirmButtonText || 'Sil';
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(okBtn);
+    dialog.appendChild(msg);
+    dialog.appendChild(actions);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    function cleanup(result) {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      resolve(result);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') cleanup(false);
+    }
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) cleanup(false);
+    });
+    cancelBtn.addEventListener('click', () => cleanup(false));
+    okBtn.addEventListener('click', () => cleanup(true));
+    document.addEventListener('keydown', onKey);
+    okBtn.focus();
+  });
+}
+
+const deleteAccountForm = document.getElementById('deleteAccountForm');
+let deleteAccountConfirmed = false;
+deleteAccountForm.addEventListener('submit', async event => {
+  if (deleteAccountConfirmed) return;
+  event.preventDefault();
+  const ok = await showConfirmModal('Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.', 'Sil');
+  if (ok) {
+    deleteAccountConfirmed = true;
+    deleteAccountForm.submit();
+  }
 });
 </script>
 </body>
