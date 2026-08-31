@@ -502,10 +502,21 @@ async function makeAdmin(userId, btn) {
   try {
     const resp = await fetch(`/admin/users/${userId}/make-admin`, { method: 'POST' });
     if (!resp.ok) throw new Error('failed');
+
+    const row = btn.parentElement;
+
     const badge = document.createElement('span');
     badge.className = 'admin-badge';
     badge.textContent = 'Yönetici';
+
+    const revokeBtn = document.createElement('button');
+    revokeBtn.type = 'button';
+    revokeBtn.className = 'make-admin-btn';
+    revokeBtn.textContent = 'Yetkiyi Kaldır';
+    revokeBtn.addEventListener('click', () => revokeAdmin(userId, revokeBtn, badge, row));
+
     btn.replaceWith(badge);
+    badge.after(revokeBtn);
   } catch (err) {
     btn.disabled = false;
     alert('Kullanıcı güncellenemedi. Lütfen tekrar deneyin.');
