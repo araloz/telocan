@@ -989,6 +989,17 @@ function addAssistantResult(result) {
   const { bubble } = addMessage('assistant', '');
   bubble.appendChild(buildResultTable(result.rows));
 
+  if (result.timing) {
+    const fmtMs = ms => ms >= 1000 ? (ms / 1000).toFixed(1) + 's' : ms + 'ms';
+    const t = result.timing;
+    const countLine = bubble.querySelector('.row-count');
+    if (countLine) {
+      const timingSpan = el('span', 'timing-line', ` · ⏱ ${fmtMs(t.total_ms)}`);
+      timingSpan.title = `LLM: ${fmtMs(t.llm_ms)}, Veritabanı: ${fmtMs(t.db_ms)}`;
+      countLine.appendChild(timingSpan);
+    }
+  }
+
   const details = el('details', 'sql-block');
   const summary = el('summary', null, "Oluşturulan SQL'i göster");
   const pre = el('pre', null, result.sql);
@@ -1029,14 +1040,6 @@ function addAssistantResult(result) {
   }
 
   bubble.appendChild(sqlRow);
-
-  if (result.timing) {
-    const fmtMs = ms => ms >= 1000 ? (ms / 1000).toFixed(1) + 's' : ms + 'ms';
-    const t = result.timing;
-    const timingLine = el('div', 'timing-line', `⏱ ${fmtMs(t.total_ms)}`);
-    timingLine.title = `LLM: ${fmtMs(t.llm_ms)}, Veritabanı: ${fmtMs(t.db_ms)}`;
-    bubble.appendChild(timingLine);
-  }
 }
 
 async function submitQuestion(question) {
