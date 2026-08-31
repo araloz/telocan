@@ -271,9 +271,9 @@ def settings():
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT email, first_name, last_name, password_hash FROM users WHERE id = %s",
+            cur.execute("SELECT email, first_name, last_name FROM users WHERE id = %s",
                 (session["user_id"],),)
-            current_email, current_first, current_last, current_hash = cur.fetchone()
+            current_email, current_first, current_last = cur.fetchone()
 
             error = None
             success = None
@@ -282,27 +282,19 @@ def settings():
                 first_name = request.form.get("first_name", "").strip()
                 last_name = request.form.get("last_name", "").strip()
                 email = request.form.get("email", "").strip().lower()
-                current_password = request.form.get("current_password", "")
-                new_password = request.form.get("new_password","")
 
                 if not first_name or not last_name or not email:
-                    error = "Ad soyad ve e-posta gerekli"
-                elif new_password and not check_password_hash(current_hash, current_password):
-                    error = "Mevcut şifre yanlış."
+                    error = "Ad, soyad ve e-posta gerekli."
                 else:
                     try:
-                        if new_password:
-                            hashed = generate_password_hash(new_password)
-                            cur.execute( "UPDATE users SET first_name = %s, last_name = %s, email = %s, password_hash = %s WHERE id = %s",
-                                    (first_name, last_name, email, hashed, session["user_id"]),)
-                        else:
-                            cur.execute( "UPDATE users SET first_name = %s, last_name = %s, email = %s WHERE id = %s",
-                                    (first_name, last_name, email, session["user_id"]),)
-
+                        cur.execute(
+                            "UPDATE users SET first_name = %s, last_name = %s, email = %s WHERE id = %s",
+                            (first_name, last_name, email, session["user_id"]),
+                        )
                         conn.commit()
                         session["first_name"] = first_name
-                        current_email, current_first,current_last = email,  first_name, last_name
-                        success = "Bilgiler güncellendi."
+                        current_email, current_first, current_last = email, first_name, last_name
+                        success = "Profil bilgileri güncellendi."
                     except psycopg2.IntegrityError:
                         conn.rollback()
                         error = "Bu e-posta zaten kullanılıyor."
@@ -316,6 +308,41 @@ def settings():
         email=current_email,
         first_name=current_first,
         last_name=current_last,
+    )
+
+
+@app.route("/settings/password", methods=["POST"])
+@login_required
+def change_password():
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT email, first_name, last_name, password_hash FROM users WHERE id = %s",
+                (session["user_id"],),)
+            email, first_name, last_name, password_hash = cur.fetchone()
+
+            if not new_password:
+                error = "Yeni şifre gerekli."
+            elif not check_password_hash(password_hash, current_password):
+                error = "Mevcut şifre yanlış."
+            else:
+                hashed = generate_password_hash(new_password)
+                cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (hashed, session["user_id"]))
+                conn.commit()
+                error = None
+    finally:
+        conn.close()
+
+    return render_template(
+        "settings.html",
+        error=error,
+        success=None if error else "Şifreniz güncellendi.",
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
     )
 
 
