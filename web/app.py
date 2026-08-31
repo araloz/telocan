@@ -526,6 +526,22 @@ def mark_report_fixed(report_id):
     return jsonify({"ok":True})
 
 
+@app.route("/reports/<int:report_id>",methods=["DELETE"])
+@admin_required
+def delete_report(report_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM reports WHERE id = %s", (report_id,))
+            deleted = cur.rowcount
+            conn.commit()
+    finally:
+        conn.close()
+
+    if deleted == 0:
+        return jsonify({"error": "Rapor bulunamadı"}), 404
+    return jsonify({"ok": True})
+
 @app.route("/admin/users")
 @admin_required
 def admin_search_users():
