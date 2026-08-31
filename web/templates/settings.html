@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Telocan — Ayarlar</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2e38;
+    --text: #e6e8ee;
+    --muted: #9aa1ac;
+    --accent: #4f8cff;
+    --error: #ff6b6b;
+    --success: #3ddc84;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  .card {
+    width: 100%;
+    max-width: 360px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+  .card h1 {
+    margin: 0 0 20px;
+    font-size: 18px;
+    text-align: center;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #0f1115;
+    color: var(--text);
+    font-size: 14px;
+  }
+  button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .error {
+    color: var(--error);
+    font-size: 13px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .success {
+    background: rgba(61, 220, 132, 0.12);
+    border: 1px solid #2e5a41;
+    color: var(--success);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 8px 0 20px;
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+  .helper {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 16px;
+  }
+  .link {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .link a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Ayarlar</h1>
+    {% if success %}<div class="success">{{ success }}</div>{% endif %}
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="POST">
+      <label for="first_name">Ad</label>
+      <input type="text" id="first_name" name="first_name" value="{{ first_name or '' }}" required>
+      <label for="last_name">Soyad</label>
+      <input type="text" id="last_name" name="last_name" value="{{ last_name or '' }}" required>
+      <label for="email">E-posta</label>
+      <input type="email" id="email" name="email" value="{{ email or '' }}" required>
+
+      <hr class="divider">
+      <p class="section-title">Şifre Değiştir</p>
+      <p class="helper">Şifrenizi değiştirmek istemiyorsanız boş bırakın.</p>
+      <label for="current_password">Mevcut Şifre</label>
+      <input type="password" id="current_password" name="current_password" autocomplete="current-password">
+      <label for="new_password">Yeni Şifre</label>
+      <input type="password" id="new_password" name="new_password" autocomplete="new-password" minlength="6">
+
+      <button type="submit">Kaydet</button>
+    </form>
+    <div class="link"><a href="/">← Telocan'a dön</a></div>
+  </div>
+</body>
+</html>

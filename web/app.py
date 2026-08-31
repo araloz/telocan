@@ -192,6 +192,61 @@ def index():
     return render_template("index.html", first_name=session.get("first_name", ""), is_admin=session.get("is_admin", False))
 
 
+@app.route("/settings", methods =["GET","POST"])
+@login_required
+def settings():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT email, first_name, last_name, password_hash FROM users WHERE id = %s",
+                (session["user_id"],),)
+            current_email, current_first, current_last, current_hash = cur.fetchone()
+
+            error = None
+            success = None
+
+            if request.method == "POST":
+                first_name = request.form.get("first_name", "").strip()
+                last_name = request.form.get("last_name", "").strip()
+                email = request.form.get("email", "").strip().lower()
+                current_password = request.form.get("current_password", "")
+                new_password = request.form.get("new_password","")
+
+                if not first_name or not last_name or not email:
+                    error = "Ad soyad ve e-posta gerekli"
+                elif new_password and not check_password_hash(current_hash, current_password):
+                    error = "Mevcut şifre yanlış."
+                else:
+                    try:
+                        if new_password:
+                            hashed = generate_password_hash(new_password)
+                            cur.execute( "UPDATE users SET first_name = %s, last_name = %s, email = %s, password_hash = %s WHERE id = %s",
+                                    (first_name, last_name, email, hashed, session["user_id"]),)
+                        else:
+                            cur.execute( "UPDATE users SET first_name = %s, last_name = %s, email = %s WHERE id = %s",
+                                    (first_name, last_name, email, session["user_id"]),)
+
+                        conn.commit()
+                        session["first_name"] = first_name
+                        current_email, current_first,current_last = email,  first_name, last_name
+                        success = "Bilgiler güncellendi."
+                    except psycopg2.IntegrityError:
+                        conn.rollback()
+                        error = "Bu e-posta zaten kullanılıyor."
+    finally:
+        conn.close()
+
+    return render_template(
+        "settings.html",
+        error=error,
+        success=success,
+        email=current_email,
+        first_name=current_first,
+        last_name=current_last,
+    )
+
+                
+
 
 @app.route("/chat", methods=["POST"])
 @login_required
