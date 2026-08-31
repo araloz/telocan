@@ -2,6 +2,16 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Apply the stored theme before first paint to avoid a flash of the wrong theme.
+  (function () {
+    try {
+      if (localStorage.getItem('telocan-theme') === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    } catch (e) {}
+  })();
+</script>
 <title>Telocan — Ayarlar</title>
 <style>
   :root {
@@ -13,6 +23,16 @@
     --accent: #4f8cff;
     --error: #ff6b6b;
     --success: #3ddc84;
+  }
+  [data-theme="light"] {
+    --bg: #f7f8fa;
+    --panel: #ffffff;
+    --border: #d8dce3;
+    --text: #1a1d23;
+    --muted: #6b7280;
+    --accent: #2f6fed;
+    --error: #d92d20;
+    --success: #15803d;
   }
   * { box-sizing: border-box; }
   body {
@@ -51,7 +71,7 @@
     margin-bottom: 16px;
     border-radius: 8px;
     border: 1px solid var(--border);
-    background: #0f1115;
+    background: var(--bg);
     color: var(--text);
     font-size: 14px;
   }

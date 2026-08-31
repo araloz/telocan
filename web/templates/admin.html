@@ -2,6 +2,16 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Apply the stored theme before first paint to avoid a flash of the wrong theme.
+  (function () {
+    try {
+      if (localStorage.getItem('telocan-theme') === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    } catch (e) {}
+  })();
+</script>
 <title>Telocan — Raporlar</title>
 <style>
   :root {
@@ -13,6 +23,24 @@
     --accent: #4f8cff;
     --user-bubble: #24304a;
     --error: #ff6b6b;
+    --hover-bg: #1d222c;
+    --code-bg: #0b0d12;
+    --code-text: #c9d1e0;
+    --success: #3ddc84;
+  }
+  [data-theme="light"] {
+    --bg: #f7f8fa;
+    --panel: #ffffff;
+    --border: #d8dce3;
+    --text: #1a1d23;
+    --muted: #6b7280;
+    --accent: #2f6fed;
+    --user-bubble: #d9e6ff;
+    --error: #d92d20;
+    --hover-bg: #eef1f5;
+    --code-bg: #f4f6f8;
+    --code-text: #1f2937;
+    --success: #15803d;
   }
   * { box-sizing: border-box; }
   body {
@@ -124,13 +152,13 @@
   details.sql-block pre {
     margin: 8px 0 0;
     padding: 10px 12px;
-    background: #0b0d12;
+    background: var(--code-bg);
     border: 1px solid var(--border);
     border-radius: 8px;
     overflow-x: auto;
     font-family: "SF Mono", Consolas, Menlo, monospace;
     font-size: 12.5px;
-    color: #c9d1e0;
+    color: var(--code-text);
   }
   .result-table-wrap {
     margin-top: 4px;
@@ -150,7 +178,7 @@
     white-space: nowrap;
   }
   table.result-table th {
-    background: #1d222c;
+    background: var(--hover-bg);
     color: var(--muted);
     font-weight: 600;
   }
@@ -192,7 +220,7 @@
     border-radius: 8px;
     background: rgba(61, 220, 132, 0.12);
     border: 1px solid #2e5a41;
-    color: #3ddc84;
+    color: var(--success);
     font-size: 13px;
     font-weight: 600;
   }
@@ -239,7 +267,7 @@
     margin-bottom: 20px;
     border-radius: 8px;
     border: 1px solid var(--border);
-    background: #0f1115;
+    background: var(--bg);
     color: var(--text);
     font-size: 14px;
     font-family: inherit;
@@ -341,7 +369,7 @@
   }
   .log-status.success {
     background: rgba(61, 220, 132, 0.12);
-    color: #3ddc84;
+    color: var(--success);
   }
   .log-status.failed {
     background: rgba(255, 107, 107, 0.12);
@@ -350,13 +378,13 @@
   .log-sql {
     margin: 10px 0 0;
     padding: 10px 12px;
-    background: #0b0d12;
+    background: var(--code-bg);
     border: 1px solid var(--border);
     border-radius: 8px;
     overflow-x: auto;
     font-family: "SF Mono", Consolas, Menlo, monospace;
     font-size: 12.5px;
-    color: #c9d1e0;
+    color: var(--code-text);
   }
   .log-error {
     margin-top: 10px;

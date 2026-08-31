@@ -2,6 +2,16 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Apply the stored theme before first paint to avoid a flash of the wrong theme.
+  (function () {
+    try {
+      if (localStorage.getItem('telocan-theme') === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    } catch (e) {}
+  })();
+</script>
 <title>Telocan — Giriş</title>
 <style>
   :root {
@@ -12,6 +22,15 @@
     --muted: #9aa1ac;
     --accent: #4f8cff;
     --error: #ff6b6b;
+  }
+  [data-theme="light"] {
+    --bg: #f7f8fa;
+    --panel: #ffffff;
+    --border: #d8dce3;
+    --text: #1a1d23;
+    --muted: #6b7280;
+    --accent: #2f6fed;
+    --error: #d92d20;
   }
   * { box-sizing: border-box; }
   body {
@@ -49,7 +68,7 @@
     margin-bottom: 16px;
     border-radius: 8px;
     border: 1px solid var(--border);
-    background: #0f1115;
+    background: var(--bg);
     color: var(--text);
     font-size: 14px;
   }
@@ -79,9 +98,34 @@
     color: var(--accent);
     text-decoration: none;
   }
+  .theme-toggle {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--panel);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .theme-toggle:hover {
+    border-color: var(--accent);
+  }
+  .theme-toggle .theme-icon-light { display: none; }
+  [data-theme="light"] .theme-toggle .theme-icon-dark { display: none; }
+  [data-theme="light"] .theme-toggle .theme-icon-light { display: inline; }
 </style>
 </head>
 <body>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Temayı değiştir" title="Temayı değiştir"><span class="theme-icon-dark">🌙</span><span class="theme-icon-light">☀️</span></button>
   <div class="card">
     <h1>Telocan'a Giriş Yap</h1>
     {% if error %}<div class="error">{{ error }}</div>{% endif %}
@@ -95,5 +139,18 @@
     <div class="link">Şifreni mi unuttun? <a href="/forgot-password">Şifremi Unuttum</a></div>
     <div class="link">Hesabın yok mu? <a href="/register">Kayıt Ol</a></div>
   </div>
+<script>
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var goingLight = document.documentElement.getAttribute('data-theme') !== 'light';
+    if (goingLight) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    try {
+      localStorage.setItem('telocan-theme', goingLight ? 'light' : 'dark');
+    } catch (e) {}
+  });
+</script>
 </body>
 </html>
