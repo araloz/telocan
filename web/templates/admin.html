@@ -304,6 +304,70 @@
     opacity: 0.5;
     cursor: default;
   }
+  .query-log-summary {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .query-log-summary strong {
+    color: var(--text);
+  }
+  .log-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid #2e5a41;
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .log-card.failed {
+    border-left-color: var(--error);
+  }
+  .log-meta-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .log-status {
+    flex-shrink: 0;
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .log-status.success {
+    background: rgba(61, 220, 132, 0.12);
+    color: #3ddc84;
+  }
+  .log-status.failed {
+    background: rgba(255, 107, 107, 0.12);
+    color: var(--error);
+  }
+  .log-sql {
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    background: #0b0d12;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: "SF Mono", Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    color: #c9d1e0;
+  }
+  .log-error {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(255, 107, 107, 0.08);
+    border: 1px solid var(--error);
+    border-radius: 8px;
+    color: var(--error);
+    font-size: 13px;
+    line-height: 1.4;
+  }
 </style>
 </head>
 <body>
@@ -311,6 +375,7 @@
   <a href="/">Telocan</a>
   <a href="#" class="tab-link active" data-panel="reportsPanel">Raporlar</a>
   <a href="#" class="tab-link" data-panel="usersPanel">Yöneticiler</a>
+  <a href="#" class="tab-link" data-panel="queryLogPanel">Sorgu Kayıtları</a>
   <div class="spacer"></div>
   <a class="logout-link" href="/logout">Çıkış Yap</a>
 </nav>
@@ -384,6 +449,12 @@
   <input type="text" id="userSearchInput" class="user-search-input" placeholder="E-posta ile ara...">
   <div id="userResults"></div>
 </div>
+
+<div id="queryLogPanel" class="panel">
+  <h1>Sorgu Kayıtları</h1>
+  <div id="queryLogSummary" class="query-log-summary"></div>
+  <div id="queryLogList"></div>
+</div>
 </main>
 
 <script>
@@ -433,6 +504,7 @@ if (reportFilterToggle) {
 const tabLinks = document.querySelectorAll('.tab-link');
 const panels = document.querySelectorAll('.panel');
 let usersLoaded = false;
+let queryLogLoaded = false;
 
 tabLinks.forEach(link => {
   link.addEventListener('click', (e) => {
@@ -444,6 +516,10 @@ tabLinks.forEach(link => {
     if (targetId === 'usersPanel' && !usersLoaded) {
       usersLoaded = true;
       searchUsers('');
+    }
+    if (targetId === 'queryLogPanel' && !queryLogLoaded) {
+      queryLogLoaded = true;
+      loadQueryLog();
     }
   });
 });
@@ -571,6 +647,99 @@ userSearchInput.addEventListener('input', () => {
   clearTimeout(userSearchTimer);
   userSearchTimer = setTimeout(() => searchUsers(userSearchInput.value.trim()), 300);
 });
+
+const queryLogSummaryEl = document.getElementById('queryLogSummary');
+const queryLogListEl = document.getElementById('queryLogList');
+
+function formatLogDate(isoString) {
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return isoString;
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function logDisplayName(log) {
+  const fullName = `${log.first_name || ''} ${log.last_name || ''}`.trim();
+  return fullName || log.email;
+}
+
+function buildLogCard(log) {
+  const card = document.createElement('div');
+  card.className = 'log-card' + (log.success ? '' : ' failed');
+
+  const meta = document.createElement('div');
+  meta.className = 'report-meta';
+
+  const author = document.createElement('span');
+  author.className = 'report-author';
+  author.textContent = logDisplayName(log);
+  meta.appendChild(author);
+
+  const right = document.createElement('div');
+  right.className = 'log-meta-right';
+
+  const status = document.createElement('span');
+  status.className = 'log-status ' + (log.success ? 'success' : 'failed');
+  status.textContent = log.success ? 'Başarılı' : 'Hata';
+  right.appendChild(status);
+
+  const date = document.createElement('span');
+  date.className = 'report-date';
+  date.textContent = formatLogDate(log.created_at);
+  right.appendChild(date);
+
+  meta.appendChild(right);
+  card.appendChild(meta);
+
+  const question = document.createElement('div');
+  question.className = 'report-question';
+  question.textContent = log.question;
+  card.appendChild(question);
+
+  if (log.success) {
+    const pre = document.createElement('pre');
+    pre.className = 'log-sql';
+    pre.textContent = log.sql;
+    card.appendChild(pre);
+  } else {
+    const errEl = document.createElement('div');
+    errEl.className = 'log-error';
+    errEl.textContent = log.error;
+    card.appendChild(errEl);
+  }
+
+  return card;
+}
+
+async function loadQueryLog() {
+  queryLogSummaryEl.textContent = '';
+  queryLogListEl.innerHTML = '';
+  try {
+    const resp = await fetch('/admin/query-log');
+    if (!resp.ok) throw new Error('failed');
+    const data = await resp.json();
+
+    if (!data.total_count) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'Henüz sorgu kaydı yok.';
+      queryLogListEl.appendChild(empty);
+      return;
+    }
+
+    const summary = document.createElement('div');
+    summary.innerHTML = `Son 100 sorgu: <strong>%${data.success_rate}</strong> başarılı (${data.success_count}/${data.total_count})`;
+    queryLogSummaryEl.appendChild(summary);
+
+    data.logs.forEach(log => queryLogListEl.appendChild(buildLogCard(log)));
+  } catch (err) {
+    queryLogListEl.innerHTML = '';
+    const errEl = document.createElement('div');
+    errEl.className = 'empty-state';
+    errEl.textContent = 'Sorgu kayıtları yüklenemedi.';
+    queryLogListEl.appendChild(errEl);
+  }
+}
 </script>
 </body>
 </html>
