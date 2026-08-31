@@ -345,7 +345,7 @@
     min-width: 0;
     margin-top: 0;
   }
-  .report-btn, .retry-btn, .csv-btn {
+  .report-btn, .retry-btn, .csv-btn, .explain-btn {
     flex-shrink: 0;
     border: none;
     background: transparent;
@@ -356,13 +356,25 @@
     padding: 4px 6px;
     border-radius: 6px;
   }
-  .report-btn:hover:not(:disabled), .retry-btn:hover:not(:disabled), .csv-btn:hover:not(:disabled) {
+  .report-btn:hover:not(:disabled), .retry-btn:hover:not(:disabled), .csv-btn:hover:not(:disabled), .explain-btn:hover:not(:disabled) {
     color: var(--accent);
     background: rgba(79, 140, 255, 0.1);
   }
-  .report-btn:disabled, .retry-btn:disabled, .csv-btn:disabled {
+  .report-btn:disabled, .retry-btn:disabled, .csv-btn:disabled, .explain-btn:disabled {
     opacity: 0.5;
     cursor: default;
+  }
+  .sql-explanation {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+    white-space: pre-wrap;
   }
   .toast {
     position: fixed;
@@ -440,6 +452,12 @@
     margin-top: 6px;
     font-size: 12px;
     color: var(--muted);
+  }
+  .timing-line {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: help;
   }
   /* Shared pill-shaped input, reused in both the hero (empty) and bottom (chat) states */
   .pill {
@@ -544,6 +562,58 @@
 
   body.state-chat #emptyState { display: none; }
   body.state-chat #bottomBar { display: flex; }
+
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+  .confirm-dialog {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    max-width: 400px;
+    width: calc(100% - 40px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+  .confirm-message {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+  .confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .confirm-actions button {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+  }
+  .confirm-cancel-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .confirm-ok-btn {
+    border-color: var(--error);
+    color: var(--error);
+  }
+  .confirm-ok-btn:hover {
+    background: var(--error);
+    color: #fff;
+  }
 </style>
 </head>
 <body class="state-empty" data-first-name="{{ first_name | e }}">
@@ -693,8 +763,58 @@ async function loadConversation(id) {
   }
 }
 
+function showConfirmModal(message, confirmButtonText) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'confirm-dialog';
+
+    const msg = document.createElement('div');
+    msg.className = 'confirm-message';
+    msg.textContent = message;
+
+    const actions = document.createElement('div');
+    actions.className = 'confirm-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'confirm-cancel-btn';
+    cancelBtn.textContent = 'İptal';
+
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'confirm-ok-btn';
+    okBtn.textContent = confirmButtonText || 'Sil';
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(okBtn);
+    dialog.appendChild(msg);
+    dialog.appendChild(actions);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    function cleanup(result) {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      resolve(result);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') cleanup(false);
+    }
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) cleanup(false);
+    });
+    cancelBtn.addEventListener('click', () => cleanup(false));
+    okBtn.addEventListener('click', () => cleanup(true));
+    document.addEventListener('keydown', onKey);
+    okBtn.focus();
+  });
+}
+
 async function deleteConversation(id, itemEl) {
-  if (!confirm('Bu sohbeti silmek istediğinizden emin misiniz?')) return;
+  if (!await showConfirmModal('Bu sohbeti silmek istediğinizden emin misiniz?', 'Sil')) return;
   try {
     const resp = await fetch(`/conversations/${id}`, { method: 'DELETE' });
     if (!resp.ok) throw new Error('failed');
@@ -792,6 +912,30 @@ function showToast(message) {
   }, 2500);
 }
 
+async function explainSql(result, btn, sqlRow) {
+  if (btn._explanationEl) {
+    btn._explanationEl.hidden = !btn._explanationEl.hidden;
+    return;
+  }
+  btn.disabled = true;
+  try {
+    const resp = await fetch('/explain-sql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql: result.sql })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error('failed');
+    const box = el('div', 'sql-explanation', data.explanation);
+    sqlRow.insertAdjacentElement('afterend', box);
+    btn._explanationEl = box;
+  } catch (err) {
+    showToast('Açıklama alınamadı.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function sendReport(result, btn) {
   btn.disabled = true;
   try {
@@ -863,10 +1007,17 @@ function addAssistantResult(result) {
   reportBtn.setAttribute('aria-label', 'Raporla');
   reportBtn.addEventListener('click', () => sendReport(result, reportBtn));
 
+  const explainBtn = el('button', 'explain-btn', '💡');
+  explainBtn.type = 'button';
+  explainBtn.title = "Bu SQL'i açıkla";
+  explainBtn.setAttribute('aria-label', 'Açıkla');
+
   const sqlRow = el('div', 'sql-row');
   sqlRow.appendChild(details);
   sqlRow.appendChild(retryBtn);
   sqlRow.appendChild(reportBtn);
+  sqlRow.appendChild(explainBtn);
+  explainBtn.addEventListener('click', () => explainSql(result, explainBtn, sqlRow));
 
   if (result.rows && result.rows.length > 0) {
     const csvBtn = el('button', 'csv-btn', '📥');
@@ -878,6 +1029,14 @@ function addAssistantResult(result) {
   }
 
   bubble.appendChild(sqlRow);
+
+  if (result.timing) {
+    const fmtMs = ms => ms >= 1000 ? (ms / 1000).toFixed(1) + 's' : ms + 'ms';
+    const t = result.timing;
+    const timingLine = el('div', 'timing-line', `⏱ ${fmtMs(t.total_ms)}`);
+    timingLine.title = `LLM: ${fmtMs(t.llm_ms)}, Veritabanı: ${fmtMs(t.db_ms)}`;
+    bubble.appendChild(timingLine);
+  }
 }
 
 async function submitQuestion(question) {
