@@ -3,5 +3,3 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-mailpit/
-mailpit.exe
