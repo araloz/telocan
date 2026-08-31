@@ -72,7 +72,7 @@ def conversations():
                 return jsonify({"id": conv_id, "created_at": created_at.isoformat()})
 
             cur.execute(
-            "SELECT id, created_at FROM conversations WHERE user_id = %s ORDER BY created_at DESC",
+            "SELECT id, created_at FROM conversations WHERE user_id = %s ORDER BY updated_at DESC",
             (session["user_id"],),
         )
             rows = cur.fetchall()
@@ -430,6 +430,7 @@ def chat():
                     psycopg2.extras.Json(result.get("timing")),
                 ),
             )
+            cur.execute("UPDATE conversations SET updated_at = NOW() WHERE id = %s", (conversation_id,))
             conn.commit()
     finally:
         conn.close()
