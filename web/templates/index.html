@@ -164,6 +164,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 14px;
   }
   header h1 {
     margin: 0;
@@ -189,25 +190,74 @@
     color: var(--text);
     border-color: var(--accent);
   }
-  .theme-toggle {
+  .account-menu {
+    position: relative;
     flex-shrink: 0;
-    padding: 6px 12px;
+  }
+  .account-menu-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
     border: 1px solid var(--border);
-    border-radius: 999px;
+    border-radius: 10px;
     background: transparent;
-    color: var(--muted);
-    font-family: inherit;
-    font-size: 12px;
+    color: var(--text);
+    font-size: 16px;
     line-height: 1;
     cursor: pointer;
   }
-  .theme-toggle:hover {
-    color: var(--text);
+  .account-menu-trigger:hover {
+    color: var(--accent);
     border-color: var(--accent);
   }
-  .theme-toggle .theme-icon-light { display: none; }
-  [data-theme="light"] .theme-toggle .theme-icon-dark { display: none; }
-  [data-theme="light"] .theme-toggle .theme-icon-light { display: inline; }
+  .account-menu-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 190px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    z-index: 100;
+  }
+  .account-menu.open .account-menu-dropdown {
+    display: flex;
+  }
+  .account-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .account-menu-item:hover {
+    background: var(--hover-bg);
+  }
+  .account-menu-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 2px;
+  }
+  #themeMenuItem .theme-icon-light { display: none; }
+  [data-theme="light"] #themeMenuItem .theme-icon-dark { display: none; }
+  [data-theme="light"] #themeMenuItem .theme-icon-light { display: inline; }
   #messages {
     flex: 1;
     overflow-y: auto;
@@ -509,10 +559,16 @@
     <h1>Telocan</h1>
     <p>Müşteriler, paketler, abonelikler, kullanım ve faturalar hakkında doğal dilde sorular sorun.</p>
   </div>
-  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Temayı değiştir" title="Temayı değiştir"><span class="theme-icon-dark">🌙</span><span class="theme-icon-light">☀️</span></button>
-  {% if is_admin %}<a class="logout-link" href="/admin">Admin Paneli</a>{% endif %}
-  <a class="logout-link" href="/settings">Ayarlar</a>
-  <a class="logout-link" href="/logout">Çıkış Yap</a>
+  <div class="account-menu" id="accountMenu">
+    <button class="account-menu-trigger" id="accountMenuTrigger" type="button" aria-label="Menü" aria-haspopup="true" aria-expanded="false">&#9776;</button>
+    <div class="account-menu-dropdown" role="menu">
+      <button class="account-menu-item" id="themeMenuItem" type="button" role="menuitem"><span class="theme-icon-dark">🌙 Koyu Tema</span><span class="theme-icon-light">☀️ Açık Tema</span></button>
+      <div class="account-menu-sep"></div>
+      {% if is_admin %}<a class="account-menu-item" href="/admin" role="menuitem">Admin Paneli</a>{% endif %}
+      <a class="account-menu-item" href="/settings" role="menuitem">Ayarlar</a>
+      <a class="account-menu-item" href="/logout" role="menuitem">Çıkış Yap</a>
+    </div>
+  </div>
 </header>
 
 <div id="emptyState">
@@ -842,8 +898,24 @@ inputEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') sendQuestion();
 });
 
-const themeToggleBtn = document.getElementById('themeToggle');
-themeToggleBtn.addEventListener('click', () => {
+const accountMenu = document.getElementById('accountMenu');
+const accountMenuTrigger = document.getElementById('accountMenuTrigger');
+const themeMenuItem = document.getElementById('themeMenuItem');
+
+accountMenuTrigger.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const open = accountMenu.classList.toggle('open');
+  accountMenuTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+
+document.addEventListener('click', (e) => {
+  if (!accountMenu.contains(e.target)) {
+    accountMenu.classList.remove('open');
+    accountMenuTrigger.setAttribute('aria-expanded', 'false');
+  }
+});
+
+themeMenuItem.addEventListener('click', () => {
   const goingLight = document.documentElement.getAttribute('data-theme') !== 'light';
   if (goingLight) {
     document.documentElement.setAttribute('data-theme', 'light');
