@@ -28,7 +28,7 @@
   }
   .card {
     width: 100%;
-    max-width: 360px;
+    max-width: 400px;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -82,10 +82,38 @@
     margin-bottom: 16px;
     text-align: center;
   }
-  .divider {
+  .tab-nav {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .tab-link {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
     border: none;
-    border-top: 1px solid var(--border);
-    margin: 8px 0 20px;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    width: auto;
+  }
+  .tab-link:hover {
+    color: var(--text);
+  }
+  .tab-link.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+  .panel {
+    display: none;
+  }
+  .panel.active {
+    display: block;
   }
   .section-title {
     font-size: 14px;
@@ -108,7 +136,6 @@
     text-decoration: none;
   }
   .danger-zone {
-    margin-top: 28px;
     padding: 16px;
     border: 1px solid var(--error);
     border-radius: 8px;
@@ -130,36 +157,62 @@
     <h1>Ayarlar</h1>
     {% if success %}<div class="success">{{ success }}</div>{% endif %}
     {% if error %}<div class="error">{{ error }}</div>{% endif %}
-    <form method="POST">
-      <label for="first_name">Ad</label>
-      <input type="text" id="first_name" name="first_name" value="{{ first_name or '' }}" required>
-      <label for="last_name">Soyad</label>
-      <input type="text" id="last_name" name="last_name" value="{{ last_name or '' }}" required>
-      <label for="email">E-posta</label>
-      <input type="email" id="email" name="email" value="{{ email or '' }}" required>
 
-      <hr class="divider">
-      <p class="section-title">Şifre Değiştir</p>
-      <p class="helper">Şifrenizi değiştirmek istemiyorsanız boş bırakın.</p>
-      <label for="current_password">Mevcut Şifre</label>
-      <input type="password" id="current_password" name="current_password" autocomplete="current-password">
-      <label for="new_password">Yeni Şifre</label>
-      <input type="password" id="new_password" name="new_password" autocomplete="new-password" minlength="6">
+    <div class="tab-nav">
+      <button type="button" class="tab-link active" data-panel="profilePanel">Profil Bilgileri</button>
+      <button type="button" class="tab-link" data-panel="passwordPanel">Şifre Değiştir</button>
+      <button type="button" class="tab-link" data-panel="deletePanel">Hesabı Sil</button>
+    </div>
 
-      <button type="submit">Kaydet</button>
-    </form>
-    <div class="link"><a href="/forgot-password">Şifremi Unuttum</a></div>
-    <div class="link"><a href="/">← Telocan'a dön</a></div>
-
-    <div class="danger-zone">
-      <p class="section-title">Tehlikeli Bölge</p>
-      <p class="helper">Hesabınızı sildiğinizde tüm sohbetleriniz, raporlarınız ve verileriniz kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
-      <form method="POST" action="/delete-account" onsubmit="return confirm('Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.');">
-        <label for="delete_current_password">Şifrenizi girerek onaylayın</label>
-        <input type="password" id="delete_current_password" name="current_password" autocomplete="current-password" required>
-        <button type="submit">Hesabımı Sil</button>
+    <div id="profilePanel" class="panel active">
+      <form method="POST" action="/settings">
+        <label for="first_name">Ad</label>
+        <input type="text" id="first_name" name="first_name" value="{{ first_name or '' }}" required>
+        <label for="last_name">Soyad</label>
+        <input type="text" id="last_name" name="last_name" value="{{ last_name or '' }}" required>
+        <label for="email">E-posta</label>
+        <input type="email" id="email" name="email" value="{{ email or '' }}" required>
+        <button type="submit">Kaydet</button>
       </form>
     </div>
+
+    <div id="passwordPanel" class="panel">
+      <form method="POST" action="/settings/password">
+        <label for="current_password">Mevcut Şifre</label>
+        <input type="password" id="current_password" name="current_password" autocomplete="current-password" required>
+        <label for="new_password">Yeni Şifre</label>
+        <input type="password" id="new_password" name="new_password" autocomplete="new-password" minlength="6" required>
+        <button type="submit">Şifreyi Güncelle</button>
+      </form>
+    </div>
+
+    <div id="deletePanel" class="panel">
+      <div class="danger-zone">
+        <p class="section-title">Tehlikeli Bölge</p>
+        <p class="helper">Hesabınızı sildiğinizde tüm sohbetleriniz, raporlarınız ve verileriniz kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
+        <form method="POST" action="/delete-account" onsubmit="return confirm('Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.');">
+          <label for="delete_current_password">Şifrenizi girerek onaylayın</label>
+          <input type="password" id="delete_current_password" name="current_password" autocomplete="current-password" required>
+          <button type="submit">Hesabımı Sil</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="link"><a href="/forgot-password">Şifremi Unuttum</a></div>
+    <div class="link"><a href="/">← Telocan'a dön</a></div>
   </div>
+
+<script>
+const tabLinks = document.querySelectorAll('.tab-link');
+const panels = document.querySelectorAll('.panel');
+tabLinks.forEach(link => {
+  link.addEventListener('click', () => {
+    const targetId = link.dataset.panel;
+    tabLinks.forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    panels.forEach(p => p.classList.toggle('active', p.id === targetId));
+  });
+});
+</script>
 </body>
 </html>
