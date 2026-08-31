@@ -338,5 +338,27 @@ def make_admin(user_id):
     return jsonify({"ok":True})
 
 
+@app.route("/admin/users/<int:user_id>/revoke-admin", methods=["POST"])
+@admin_required
+def revoke_admin(user_id):
+    if user_id == session["user_id"]:
+        return jsonify({"error":"Kendi yetkinizi kaldıramazsınız"}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET is_admin = FALSE WHERE id = %s", (user_id,))
+            updated = cur.rowcount
+            conn.commit()
+
+    finally:
+        conn.close()
+
+    if updated == 0:
+        return jsonify({"error": "Kullanıcı bulunamadı."}), 404
+
+    return jsonify({"ok": True})
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

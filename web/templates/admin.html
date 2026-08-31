@@ -202,6 +202,36 @@
   .panel.active {
     display: block;
   }
+  .filter-toggle {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+  .filter-pill {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .filter-pill:hover {
+    color: var(--text);
+  }
+  .filter-pill.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .report-card.hidden {
+    display: none;
+  }
   .user-search-input {
     width: 100%;
     max-width: 400px;
@@ -289,12 +319,19 @@
 <div id="reportsPanel" class="panel active">
   <h1>Raporlar</h1>
 
+  {% if reports %}
+    <div class="filter-toggle" id="reportFilterToggle">
+      <button type="button" class="filter-pill active" data-filter="open">Açık</button>
+      <button type="button" class="filter-pill" data-filter="all">Tümü</button>
+    </div>
+  {% endif %}
+
   {% if not reports %}
     <div class="empty-state">Henüz rapor yok.</div>
   {% else %}
     {% for report in reports %}
       {% set full_name = ((report.first_name or '') ~ ' ' ~ (report.last_name or '')).strip() %}
-      <div class="report-card{{ ' fixed' if report.is_fixed else '' }}">
+      <div class="report-card{{ ' fixed' if report.is_fixed else '' }}" data-fixed="{{ 'true' if report.is_fixed else 'false' }}">
         <div class="report-meta">
           <span class="report-author">{{ full_name if full_name else report.email }}</span>
           <span class="report-date">{{ report.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
@@ -363,12 +400,35 @@ document.querySelectorAll('.fix-btn').forEach(btn => {
       badge.textContent = 'Düzeltildi ✓';
       btn.replaceWith(badge);
       card.classList.add('fixed');
+      card.dataset.fixed = 'true';
+      applyReportFilter();
     } catch (err) {
       btn.disabled = false;
       alert('Rapor güncellenemedi. Lütfen tekrar deneyin.');
     }
   });
 });
+
+const reportFilterToggle = document.getElementById('reportFilterToggle');
+let reportFilter = 'open';
+
+function applyReportFilter() {
+  document.querySelectorAll('.report-card').forEach(card => {
+    const isFixed = card.dataset.fixed === 'true';
+    card.classList.toggle('hidden', reportFilter === 'open' && isFixed);
+  });
+}
+
+if (reportFilterToggle) {
+  reportFilterToggle.querySelectorAll('.filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      reportFilter = pill.dataset.filter;
+      reportFilterToggle.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p === pill));
+      applyReportFilter();
+    });
+  });
+  applyReportFilter();
+}
 
 const tabLinks = document.querySelectorAll('.tab-link');
 const panels = document.querySelectorAll('.panel');
@@ -418,6 +478,13 @@ function buildUserRow(user) {
     badge.className = 'admin-badge';
     badge.textContent = 'Yönetici';
     row.appendChild(badge);
+
+    const revokeBtn = document.createElement('button');
+    revokeBtn.type = 'button';
+    revokeBtn.className = 'make-admin-btn';
+    revokeBtn.textContent = 'Yetkiyi Kaldır';
+    revokeBtn.addEventListener('click', () => revokeAdmin(user.id, revokeBtn, badge, row));
+    row.appendChild(revokeBtn);
   } else {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -442,6 +509,27 @@ async function makeAdmin(userId, btn) {
   } catch (err) {
     btn.disabled = false;
     alert('Kullanıcı güncellenemedi. Lütfen tekrar deneyin.');
+  }
+}
+
+async function revokeAdmin(userId, btn, badge, row) {
+  btn.disabled = true;
+  try {
+    const resp = await fetch(`/admin/users/${userId}/revoke-admin`, { method: 'POST' });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      throw new Error(data.error || 'Kullanıcı güncellenemedi. Lütfen tekrar deneyin.');
+    }
+    const makeBtn = document.createElement('button');
+    makeBtn.type = 'button';
+    makeBtn.className = 'make-admin-btn';
+    makeBtn.textContent = 'Yönetici Yap';
+    makeBtn.addEventListener('click', () => makeAdmin(userId, makeBtn));
+    badge.remove();
+    btn.replaceWith(makeBtn);
+  } catch (err) {
+    btn.disabled = false;
+    alert(err.message || 'Kullanıcı güncellenemedi. Lütfen tekrar deneyin.');
   }
 }
 
