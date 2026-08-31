@@ -185,6 +185,13 @@ A: SELECT s.customer_id, SUM(u.internet_used_mb) FROM usage_records u JOIN subsc
 Q: which customers used 120 SMS in July?
 A: SELECT c.* FROM customers c JOIN subscriptions s ON s.customer_id = c.id JOIN usage_records u ON u.subscription_id = s.id WHERE u.sms_used = 120 AND EXTRACT(MONTH FROM u.period_month) = 7;
 
+Follow-up questions: if recent conversation history is provided below, use it ONLY to resolve
+what an implicit/incomplete follow-up question refers to (e.g. "peki faturalı olanlar?", "ya
+geçen ay?", "onlar kaç kişi?"). Always generate a fresh, complete, self-contained SQL query for
+the CURRENT question -- never just repeat a previous query verbatim unless it is genuinely
+identical to what's being asked now. If the current question is already complete and
+self-contained on its own, ignore the history entirely.
+{history}
 User question: {question}
 """
 
@@ -202,8 +209,18 @@ def _strip_code_fences(text: str) -> str:
     return text.strip()
 
 
-def generate_sql(question: str) -> str:
-    prompt = SYSTEM_PROMPT.format(question=question)
+def _format_history(history: list[dict] | None) -> str:
+    if not history:
+        return ""
+    lines = ["Recent conversation history (for understanding follow-up questions):"]
+    for h in history:
+        lines.append(f"Q: {h['question']}")
+        lines.append(f"SQL: {h['sql']}")
+    return "\n".join(lines) + "\n"
+
+
+def generate_sql(question: str, history: list[dict] | None = None) -> str:
+    prompt = SYSTEM_PROMPT.format(question=question, history=_format_history(history))
     response = requests.post(
         f"{OLLAMA_URL}/api/generate",
         json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
@@ -247,8 +264,8 @@ def run_query(sql: str) -> list[dict]:
         conn.close()
 
 
-def ask_database(question: str) -> dict:
-    sql = generate_sql(question)
+def ask_database(question: str, history: list[dict] | None = None) -> dict:
+    sql = generate_sql(question, history)
     validate_sql(sql)
     rows = run_query(sql)
     return {"question": question, "sql": sql, "rows": rows}
