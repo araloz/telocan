@@ -1,6 +1,7 @@
 import os
 import sys
-
+import secrets
+from datetime import datetime, timedelta, timezone
 from flask import Flask, jsonify, render_template, request, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -184,6 +185,78 @@ def login():
         return render_template("login.html", error="Geçersiz e-posta veya şifre.")
 
     return render_template("login.html", error=None)
+
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    reset_link = None
+    error = None
+    if request.method == "POST":
+        email = request.form.get("email","").strip().lower()
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+                row = cur.fetchone()
+                if row:
+                    token = secrets.token_urlsafe(32)
+                    expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
+                    cur.execute(
+                        "INSERT INTO password_resets (user_id, token, expires_at) VALUES (%s, %s, %s)",
+                        (row[0], token, expires_at),
+                    )
+                    conn.commit()
+                    reset_link = url_for("reset_password", token=token, _external=True)
+                else:
+                    error = "Bu e-posta ile kayıtlı bir hesap bulunamadı."
+        finally:
+            conn.close()
+    return render_template("forgot_password.html", reset_link=reset_link, error=error)
+
+
+@app.route("/reset-password", methods=["GET", "POST"])
+def reset_password():
+    token = request.values.get("token","")
+    error = None
+    success = None
+    token_valid = False
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT user_id, expires_at, used FROM password_resets WHERE token = %s",
+                (token,),)
+            row = cur.fetchone()
+
+            if not row:
+                error = "Geçersiz bağlantı."
+            else:
+                user_id, expires_at, used = row
+                if used:
+                    error = "Bu bağlantı zaten kullanılmış."
+                elif expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+                    error = "Bu bağlantının süresi dolmuş."
+                else:
+                    token_valid = True
+                    if request.method == "POST":
+                        new_password = request.form.get("new_password","")
+
+                        if not new_password:
+                            error = "Yeni şifre gerekli."
+                        else:
+                            hashed = generate_password_hash(new_password)
+                            cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (hashed, user_id))
+                            cur.execute("UPDATE password_resets SET used = TRUE WHERE token = %s", (token,))
+                            conn.commit()
+                            success = "Şifreniz güncellendi."
+                            token_valid = False
+
+    finally:
+        conn.close()
+    return render_template("reset_password.html", token=token, error=error, success=success, token_valid=token_valid)
+                    
+
+
 
 
 @app.route("/")

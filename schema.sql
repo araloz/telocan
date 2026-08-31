@@ -103,3 +103,13 @@ CREATE TABLE query_log (
     error_message TEXT,
     created_at    TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- Single-use, time-limited tokens for the "forgot password" email flow.
+CREATE TABLE password_resets (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id),
+    token       TEXT NOT NULL UNIQUE,
+    expires_at  TIMESTAMP NOT NULL,
+    used        BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+);
