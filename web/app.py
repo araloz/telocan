@@ -191,8 +191,21 @@ def chat():
     if not question:
         return jsonify({"error": "Soru gerekli."}), 400
 
+    history = []
+    if conversation_id:
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute( "SELECT question, sql_query FROM chat_messages WHERE conversation_id = %s "
+                    "ORDER BY created_at DESC LIMIT 3",
+                    (conversation_id,),)
+                rows = cur.fetchall()
+        finally:
+            conn.close()
+        history = [{"question": r[0], "sql": r[1]} for r in reversed(rows)]
+
     try:
-        result = ask_database(question)
+        result = ask_database(question, history = history)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
