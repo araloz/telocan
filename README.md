@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/telocan-logo-tile.png" width="480" alt="Telocan — natural-language telecom SQL">
+</p>
+
 # Telocan
 
 A telecom demo project: a PostgreSQL database of customers, packages,
@@ -101,6 +105,7 @@ Telocan/
       login.html
       register.html
       admin.html      # Reports + admin user management
+  docs/               # Logo and brand assets (see docs/telocan-logo-tile.svg)
 ```
 
 ## Notes
