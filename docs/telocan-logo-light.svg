@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 380"><defs>
+  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#5b93ff"/>
+    <stop offset="1" stop-color="#3f78e0"/>
+  </linearGradient>
+  <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#9fc0ff"/>
+    <stop offset="1" stop-color="#4f8cff"/>
+  </linearGradient>
+  <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#1b1f29"/>
+    <stop offset="1" stop-color="#0f1115"/>
+  </linearGradient>
+</defs><g transform="translate(10,-46) scale(0.92)">
+  <g transform="translate(46,60) scale(0.80)">
+    <ellipse cx="230" cy="374" rx="188" ry="28" fill="none"
+             stroke="#3f78e0" stroke-width="7" stroke-linecap="round"/>
+    <rect x="94"  y="272" width="46" height="92"  rx="15" fill="url(#g1)"/>
+    <rect x="162" y="212" width="46" height="152" rx="15" fill="url(#g1)"/>
+    <rect x="230" y="150" width="46" height="214" rx="15" fill="url(#g1)"/>
+    <rect x="298" y="82"  width="46" height="282" rx="15" fill="url(#g2)"/>
+    <g fill="none" stroke="#4f8cff" stroke-width="15" stroke-linecap="round">
+      <circle cx="321" cy="78" r="7" fill="#4f8cff" stroke="none"/>
+      <path d="M 346 42 A 44 44 0 0 1 357 103" opacity="1"/>
+      <path d="M 366 14 A 78 78 0 0 1 385 123" opacity="0.68"/>
+      <path d="M 385 -14 A 112 112 0 0 1 413 142" opacity="0.4"/>
+    </g>
+  </g>
+</g><text x="392" y="242" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="176" font-weight="600" letter-spacing="-4" fill="#1a1d23">telocan</text><text x="398" y="304" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="40" font-weight="400" letter-spacing="0.5" fill="#1a1d23" opacity="0.55">natural-language telecom SQL</text></svg>
